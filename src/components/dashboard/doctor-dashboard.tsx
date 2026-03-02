@@ -49,12 +49,12 @@ export function DoctorDashboard({
 
 			<Tabs defaultValue="queue" className="w-full" id="doctor-dashboard-tabs">
 				<TabsList className="grid w-full grid-cols-3 mb-8">
-					<TabsTrigger value="queue">Active Queue</TabsTrigger>
-					<TabsTrigger value="patients">My Patients</TabsTrigger>
-					<TabsTrigger value="profile">Profile</TabsTrigger>
+					<TabsTrigger value="queue" id="tab-trigger-queue">Active Queue</TabsTrigger>
+					<TabsTrigger value="patients" id="tab-trigger-patients">My Patients</TabsTrigger>
+					<TabsTrigger value="profile" id="tab-trigger-profile">Profile</TabsTrigger>
 				</TabsList>
 
-				<TabsContent value="queue">
+				<TabsContent value="queue" id="tab-content-queue">
 					<DoctorQueue 
 						queue={queue} 
 						onMarkDone={markDone} 
@@ -62,7 +62,7 @@ export function DoctorDashboard({
 					/>
 				</TabsContent>
 
-				<TabsContent value="patients">
+				<TabsContent value="patients" id="tab-content-patients">
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 						<DoctorConsents
 							consents={consents}
@@ -79,7 +79,7 @@ export function DoctorDashboard({
 					</div>
 				</TabsContent>
 
-				<TabsContent value="profile">
+				<TabsContent value="profile" id="tab-content-profile">
 					<Card>
 						<CardHeader>
 							<CardTitle>Professional Profile</CardTitle>
