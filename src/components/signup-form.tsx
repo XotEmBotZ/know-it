@@ -1,157 +1,339 @@
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { createClient } from "@/utils/supabase/server"
-import { redirect } from "next/navigation"
-import Link from "next/link"
+"use client"
 
-export async function SignupForm({
-  className,
-  error,
-  ...props
-}: React.ComponentProps<"div"> & { error?: string }) {
-  const signup = async (formData: FormData) => {
-    "use server"
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
-    const confirmPassword = formData.get("confirm-password") as string
-    const supabase = await createClient()
+import React, { useState } from "react"
+import { 
+  HeartPulse, 
+  ChevronLeft, 
+  ChevronRight, 
+  ArrowRight,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff
+} from "lucide-react"
+import { signup } from "@/app/auth/actions"
 
-    if (password !== confirmPassword) {
-      return redirect("/signup?error=Passwords do not match")
-    }
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    })
-
-    if (error) {
-      return redirect(`/signup?error=${encodeURIComponent(error.message)}`)
-    }
-
-    return redirect("/onboarding")
-  }
+export function SignupForm({ error }: { error?: string }) {
+  const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="overflow-hidden p-0">
-        <CardContent className="grid p-0 md:grid-cols-2">
-          <form action={signup} className="p-6 md:p-8">
-            <FieldGroup>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="text-2xl font-bold">Create your account</h1>
-                <p className="text-muted-foreground text-sm text-balance">
-                  Enter your email below to create your account
-                </p>
+    <div className="signup-container">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        .signup-container {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'Plus Jakarta Sans', sans-serif !important;
+        }
+
+        .signup-card {
+          display: flex;
+          width: 100%;
+          max-width: 1050px;
+          height: 90vh;
+          max-height: 750px;
+          background: white;
+          border-radius: 32px;
+          overflow: hidden;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        }
+
+        .left-side {
+          width: 50%;
+          position: relative;
+          color: white;
+          background: #000;
+        }
+
+        .left-image {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          opacity: 0.75;
+        }
+
+        .left-content {
+          position: absolute;
+          inset: 0;
+          padding: 50px;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+          background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+        }
+
+        .right-side {
+          width: 50%;
+          padding: 40px 60px;
+          display: flex;
+          flex-direction: column;
+          background: white;
+          position: relative;
+          overflow-y: auto;
+        }
+
+        .top-logo {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 8px;
+          margin-bottom: 25px;
+        }
+
+        .title {
+          font-size: 32px;
+          font-weight: 800;
+          color: #111;
+          margin: 0 0 6px 0;
+          letter-spacing: -0.03em;
+          line-height: 1;
+        }
+
+        .subtitle {
+          font-size: 14px;
+          color: #6b7280;
+          margin-bottom: 25px;
+          font-weight: 500;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin-bottom: 14px;
+        }
+
+        .label {
+          font-size: 10px;
+          font-weight: 800;
+          text-transform: uppercase;
+          color: #6b7280;
+          letter-spacing: 0.05em;
+          margin-left: 4px;
+        }
+
+        .input-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .input-icon {
+          position: absolute;
+          left: 16px;
+          color: #d1d5db;
+        }
+
+        .input-field {
+          width: 100%;
+          padding: 12px 16px 12px 48px;
+          background: #f9fafb;
+          border: 1px solid #f3f4f6;
+          border-radius: 16px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #111;
+          outline: none;
+          transition: 0.2s;
+        }
+
+        .input-field:focus {
+          background: white;
+          border-color: #059669;
+          box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.05);
+        }
+
+        .password-toggle {
+          position: absolute;
+          right: 16px;
+          color: #d1d5db;
+          cursor: pointer;
+          background: none;
+          border: none;
+          display: flex;
+          align-items: center;
+        }
+
+        .continue-btn {
+          width: 100%;
+          padding: 16px;
+          background: #059669;
+          color: white;
+          border: none;
+          border-radius: 100px;
+          font-size: 16px;
+          font-weight: 800;
+          cursor: pointer;
+          margin-top: 10px;
+          transition: 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.3);
+        }
+
+        .continue-btn:hover {
+          background: #047857;
+          transform: translateY(-1px);
+        }
+
+        .footer {
+          margin-top: auto;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          padding-top: 20px;
+        }
+
+        .need-help {
+          font-size: 12px;
+          font-weight: 700;
+          color: #9ca3af;
+          text-transform: uppercase;
+          cursor: pointer;
+        }
+
+        .spinner {
+          width: 20px;
+          height: 20px;
+          border: 3px solid rgba(255,255,255,0.3);
+          border-radius: 50%;
+          border-top-color: #fff;
+          animation: spin 0.8s linear infinite;
+        }
+
+        .error-message {
+          color: #ef4444;
+          font-size: 13px;
+          font-weight: 600;
+          text-align: center;
+          margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 850px) {
+          .signup-card { flex-direction: column; height: auto; max-height: none; border-radius: 0; box-shadow: none; }
+          .left-side, .right-side { width: 100%; }
+          .left-side { height: 220px; }
+          .left-content { padding: 30px; }
+          .left-content h2 { font-size: 22px !important; margin-bottom: 10px !important; }
+          .left-content p { font-size: 14px !important; }
+          .right-side { padding: 30px 24px; border-radius: 32px 32px 0 0; margin-top: -32px; z-index: 10; min-height: 500px; }
+          .title { font-size: 28px; }
+          .subtitle { font-size: 14px; margin-bottom: 20px; }
+          .top-logo { position: absolute; top: 30px; right: 24px; margin-bottom: 0; }
+          .footer { padding-bottom: 20px; }
+        }
+      ` }} />
+
+      <div className="signup-card">
+        {/* Left Side */}
+        <div className="left-side">
+          <img 
+            src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=2070&auto=format&fit=crop" 
+            className="left-image"
+            alt="Healthcare"
+          />
+          <div className="left-content">
+            <h2 style={{ fontSize: '28px', fontWeight: 800, lineHeight: 1.1, marginBottom: '20px' }}>
+              "Join CureIt Health and take control of your wellness."
+            </h2>
+            <div style={{ marginBottom: '30px' }}>
+              <p style={{ fontWeight: 700, margin: 0, fontSize: '16px' }}>Paityn Korsgaard</p>
+              <p style={{ fontSize: '12px', opacity: 0.7, margin: 0, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Healthcare Advocate</p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><ChevronLeft size={18} /></div>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><ChevronRight size={18} /></div>
               </div>
-              <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                />
-                <FieldDescription>
-                  We&apos;ll use this to contact you.
-                </FieldDescription>
-              </Field>
-              <Field>
-                <Field className="grid grid-cols-2 gap-4">
-                  <Field>
-                    <FieldLabel htmlFor="password">Password</FieldLabel>
-                    <Input id="password" name="password" type="password" required />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="confirm-password">
-                      Confirm Password
-                    </FieldLabel>
-                    <Input id="confirm-password" name="confirm-password" type="password" required />
-                  </Field>
-                </Field>
-                <FieldDescription>
-                  Must be at least 8 characters long.
-                </FieldDescription>
-              </Field>
-              {error && (
-                <p className="text-destructive text-sm text-center font-medium">
-                  {error}
-                </p>
-              )}
-              <Field>
-                <Button type="submit" className="w-full">Create Account</Button>
-              </Field>
-              <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
-                Or continue with
-              </FieldSeparator>
-              <Field className="grid grid-cols-3 gap-4">
-                <Button variant="outline" type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path
-                      d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"
-                      fill="currentColor"
-                    />
-                  </svg>
-                  <span className="sr-only">Sign up with Apple</span>
-                </Button>
-                <Button variant="outline" type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path
-                      d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                  <span className="sr-only">Sign up with Google</span>
-                </Button>
-                <Button variant="outline" type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path
-                      d="M6.915 4.03c-1.968 0-3.683 1.28-4.871 3.113C.704 9.208 0 11.883 0 14.449c0 .706.07 1.369.21 1.973a6.624 6.624 0 0 0 .265.86 5.297 5.297 0 0 0 .371.761c.696 1.159 1.818 1.927 3.593 1.927 1.497 0 2.633-.671 3.965-2.444.76-1.012 1.144-1.626 2.663-4.32l.756-1.339.186-.325c.061.1.121.196.183.3l2.152 3.595c.724 1.21 1.665 2.556 2.47 3.314 1.046.987 1.992 1.22 3.06 1.22 1.075 0 1.876-.355 2.455-.843a3.743 3.743 0 0 0 .81-.973c.542-.939.861-2.127.861-3.745 0-2.72-.681-5.357-2.084-7.45-1.282-1.912-2.957-2.93-4.716-2.93-1.047 0-2.088.467-3.053 1.308-.652.57-1.257 1.29-1.82 2.05-.69-.875-1.335-1.547-1.958-2.056-1.182-.966-2.315-1.303-3.454-1.303zm10.16 2.053c1.147 0 2.188.758 2.992 1.999 1.132 1.748 1.647 4.195 1.647 6.4 0 1.548-.368 2.9-1.839 2.9-.58 0-1.027-.23-1.664-1.004-.496-.601-1.343-1.878-2.832-4.358l-.617-1.028a44.908 44.908 0 0 0-1.255-1.98c.07-.109.141-.224.211-.327 1.12-1.667 2.118-2.602 3.358-2.602zm-10.201.553c1.265 0 2.058.791 2.675 1.446.307.327.737.871 1.234 1.579l-1.02 1.566c-.757 1.163-1.882 3.017-2.837 4.338-1.191 1.649-1.81 1.817-2.486 1.817-.524 0-1.038-.237-1.383-.794-.263-.426-.464-1.13-.464-2.046 0-2.221.63-4.535 1.66-6.088.454-.687.964-1.226 1.533-1.533a2.264 2.264 0 0 1 1.088-.285z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                  <span className="sr-only">Sign up with Meta</span>
-                </Button>
-              </Field>
-              <FieldDescription className="text-center">
-                Already have an account? <Link href="/login">Sign in</Link>
-              </FieldDescription>
-            </FieldGroup>
-          </form>
-          <div className="bg-slate-50 relative hidden md:flex items-center justify-center p-8 overflow-hidden border-l">
-            {/* Professional Blue Accent in Top Left */}
-            <div className="absolute top-0 left-0 w-64 h-64 bg-blue-600/10 rounded-br-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
-            
-            <div className="relative z-10 text-center space-y-4">
-              <div className="space-y-1">
-                <h2 className="text-5xl font-black tracking-tighter uppercase flex flex-col items-center leading-none">
-                  <span className="text-[#FF9933] drop-shadow-sm">In Indians</span>
-                  <span className="text-[#000080] py-2">We Trust</span>
-                  <span className="text-[#138808] drop-shadow-sm">Jai Hind</span>
-                </h2>
-              </div>
-              <div className="h-px w-24 bg-gradient-to-r from-transparent via-slate-300 to-transparent mx-auto" />
-              <p className="text-slate-500 text-xs font-bold tracking-[0.3em] uppercase opacity-80">
-                A Vision for Bharat
-              </p>
+              <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.1em' }}>LEARN MORE →</div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-      <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
-      </FieldDescription>
+        </div>
+
+        {/* Right Side */}
+        <div className="right-side">
+          <div className="top-logo">
+            <div style={{ background: '#059669', padding: '6px', borderRadius: '8px' }}>
+              <HeartPulse size={18} color="white" />
+            </div>
+            <span style={{ fontWeight: 800, color: '#111', fontSize: '18px', letterSpacing: '-0.02em' }}>CureIt Health</span>
+          </div>
+
+          <h1 className="title">Create Account</h1>
+          <p className="subtitle">Join us to manage your health journey.</p>
+
+          <form action={signup} onSubmit={() => setIsLoading(true)} style={{ width: '100%' }}>
+            <div className="form-group">
+              <div className="label">Work Email</div>
+              <div className="input-wrapper">
+                <Mail className="input-icon" size={18} />
+                <input name="email" type="email" className="input-field" placeholder="name@example.com" required />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <div className="label">Password</div>
+              <div className="input-wrapper">
+                <Lock className="input-icon" size={18} />
+                <input 
+                  name="password"
+                  type={showPassword ? "text" : "password"} 
+                  className="input-field" 
+                  placeholder="••••••••" 
+                  required 
+                />
+                <button 
+                  type="button" 
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group">
+                <div className="label">Confirm Password</div>
+                <div className="input-wrapper">
+                    <Lock className="input-icon" size={18} />
+                    <input 
+                    name="confirmPassword"
+                    type={showPassword ? "text" : "password"} 
+                    className="input-field" 
+                    placeholder="••••••••" 
+                    required 
+                    />
+                </div>
+            </div>
+
+            {error && <div className="error-message">{error}</div>}
+
+            <button type="submit" className="continue-btn" disabled={isLoading}>
+              {isLoading ? <div className="spinner"></div> : <>Sign Up <ArrowRight size={18} /></>}
+            </button>
+          </form>
+
+          <div className="footer">
+            <div className="need-help" onClick={() => window.location.href='/login'}>Already have an account? Sign in</div>
+            <div style={{ textAlign: 'right', opacity: 0.4 }}>
+              <div style={{ fontSize: '9px', fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>In Indians We Trust</div>
+              <div style={{ height: '2px', width: '40px', background: 'linear-gradient(to right, #FF9933, #000080, #138808)', marginLeft: 'auto' }}></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
