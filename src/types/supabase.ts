@@ -270,11 +270,65 @@ export type Database = {
           },
         ]
       }
+      temporary_access_tokens: {
+        Row: {
+          id: string
+          created_at: string | null
+          medical_record_id: string
+          patient_id: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          created_at?: string | null
+          medical_record_id: string
+          patient_id: string
+          expires_at: string
+        }
+        Update: {
+          id?: string
+          created_at?: string | null
+          medical_record_id?: string
+          patient_id?: string
+          expires_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temporary_access_tokens_medical_record_id_fkey"
+            columns: ["medical_record_id"]
+            isOneToOne: false
+            referencedRelation: "medical_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporary_access_tokens_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_record_by_token: {
+        Args: {
+          p_token_id: string
+        }
+        Returns: {
+          id: string
+          patient_name: string
+          doctor_name: string
+          date: string
+          symptoms: string
+          solutions: string
+          suggested_tests: string[]
+          expires_at: string
+        }[]
+      }
       match_patient_knowledge_hybrid: {
         Args: {
           p_patient_id: string

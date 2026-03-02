@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { PatientConsents } from '@/components/patient-consents'
 import { ChatUI, Message } from './chat-ui'
-import { MessageSquare, X } from 'lucide-react'
+import { MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { chatAction } from '@/app/actions/chat-actions'
+import { SharePrescriptionDialog } from './share-prescription-dialog'
 
 interface PatientDashboardProps {
 	profile: any
@@ -131,12 +132,15 @@ export function PatientDashboard({
 											className="p-4 border rounded-lg flex flex-col gap-2"
 										>
 											<div className="flex justify-between items-start">
-												<p className="font-semibold">
-													{record.doctor?.full_name || 'Doctor'}
-												</p>
-												<p className="text-sm text-muted-foreground">
-													{new Date(record.date).toLocaleDateString()}
-												</p>
+												<div>
+													<p className="font-semibold">
+														{record.doctor?.full_name || 'Doctor'}
+													</p>
+													<p className="text-sm text-muted-foreground">
+														{new Date(record.date).toLocaleDateString()}
+													</p>
+												</div>
+												<SharePrescriptionDialog medicalRecordId={record.id} />
 											</div>
 											<p className="text-sm">
 												<span className="font-medium">

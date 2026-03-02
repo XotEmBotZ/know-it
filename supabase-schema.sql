@@ -202,6 +202,41 @@ begin
 end;
 $function$;
 
+CREATE OR REPLACE FUNCTION public.get_record_by_token(p_token_id uuid)
+RETURNS TABLE (
+    id uuid,
+    patient_name text,
+    doctor_name text,
+    date date,
+    symptoms text,
+    solutions text,
+    suggested_tests text[],
+    expires_at timestamp with time zone
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        mr.id,
+        p.full_name as patient_name,
+        d.full_name as doctor_name,
+        mr.date,
+        mr.symptoms,
+        mr.solutions,
+        mr.suggested_tests,
+        tat.expires_at
+    FROM public.temporary_access_tokens tat
+    JOIN public.medical_records mr ON mr.id = tat.medical_record_id
+    JOIN public.profiles p ON p.id = mr.patient_id
+    LEFT JOIN public.profiles d ON d.id = mr.doctor_id
+    WHERE tat.id = p_token_id
+    AND tat.expires_at > now();
+END;
+$$;
+
 -- TABLES
 
 CREATE TABLE public.profiles (
@@ -268,6 +303,14 @@ CREATE TABLE public.appointment_queue (
     UNIQUE (doctor_id, patient_id, appointment_date)
 );
 
+CREATE TABLE public.temporary_access_tokens (
+    id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    medical_record_id uuid NOT NULL REFERENCES public.medical_records(id) ON DELETE CASCADE,
+    patient_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    expires_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
 -- INDEXES
 CREATE INDEX idx_medical_records_fts ON public.medical_records USING gin (fts_tokens);
 CREATE INDEX idx_medical_records_symptoms_embedding ON public.medical_records USING hnsw (symptoms_embedding vector_cosine_ops);
@@ -310,8 +353,12 @@ CREATE POLICY "Patients can see referrals made for them." ON public.referrals FO
 ALTER TABLE public.appointment_queue ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Doctors can manage their queue" ON public.appointment_queue FOR ALL USING (auth.uid() = doctor_id);
 CREATE POLICY "Doctors can view their own queues" ON public.appointment_queue FOR SELECT USING (auth.uid() = doctor_id);
-CREATE POLICY "Patients can book appointments" ON public.appointment_queue FOR INSERT WITH CHECK ((auth.uid() = patient_id) AND (appointment_date > CURRENT_DATE));
+CREATE POLICY "Patients can book appointments" ON public.appointment_queue FOR INSERT WITH CHECK ((auth.uid() = patient_id) AND (appointment_date >= CURRENT_DATE));
 CREATE POLICY "Patients can view their own appointments" ON public.appointment_queue FOR SELECT USING (auth.uid() = patient_id);
+
+ALTER TABLE public.temporary_access_tokens ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Patients can manage their own tokens" ON public.temporary_access_tokens FOR ALL USING (auth.uid() = patient_id);
+CREATE POLICY "Doctors can see tokens for their patients" ON public.temporary_access_tokens FOR SELECT USING (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = temporary_access_tokens.patient_id) AND (medical_consents.status = 'active'::text))));
 
 -- TRIGGERS
 CREATE TRIGGER on_referral_created AFTER INSERT ON public.referrals FOR EACH ROW EXECUTE FUNCTION handle_referral_consent();

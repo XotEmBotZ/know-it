@@ -219,4 +219,28 @@ export class DataAccessLayer {
     if (error) throw error;
     return data as TestResult;
   }
+
+  // --- Temporary Access ---
+
+  async createTemporaryAccessToken(tokenId: string, medicalRecordId: string, patientId: string, expiresAt: string) {
+    const { data, error } = await this.supabase
+      .from('temporary_access_tokens')
+      .insert({
+        id: tokenId,
+        medical_record_id: medicalRecordId,
+        patient_id: patientId,
+        expires_at: expiresAt
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async getRecordByToken(tokenId: string) {
+    const { data, error } = await this.supabase
+      .rpc('get_record_by_token', { p_token_id: tokenId });
+    if (error) throw error;
+    return data?.[0] || null;
+  }
 }
