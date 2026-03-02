@@ -10,6 +10,7 @@ interface PatientDashboardProps {
   signOut: () => Promise<void>
   approveConsent: (doctorId: string) => Promise<void>
   revokeConsent: (doctorId: string) => Promise<void>
+  deleteConsent: (doctorId: string) => Promise<void>
   searchDoctors: (query: string) => Promise<any[]>
 }
 
@@ -19,6 +20,7 @@ export function PatientDashboard({
   signOut,
   approveConsent,
   revokeConsent,
+  deleteConsent,
   searchDoctors,
 }: PatientDashboardProps) {
   const metadata = profile.metadata as any
@@ -48,6 +50,7 @@ export function PatientDashboard({
           initialConsents={consents} 
           onApprove={approveConsent}
           onRevoke={revokeConsent}
+          onDelete={deleteConsent}
           onSearchDoctors={searchDoctors}
           onGrantAccess={approveConsent}
         />

@@ -65,11 +65,19 @@ export class DataAccessLayer {
     return data;
   }
 
-  async revokeConsent(patientId: string, doctorId: string) {
+  async revokeConsent(patient_id: string, doctor_id: string) {
     const { error } = await this.supabase
       .from('medical_consents')
       .update({ status: 'revoked' })
-      .match({ patient_id: patientId, doctor_id: doctorId });
+      .match({ patient_id, doctor_id });
+    if (error) throw error;
+  }
+
+  async deleteConsent(patient_id: string, doctor_id: string) {
+    const { error } = await this.supabase
+      .from('medical_consents')
+      .delete()
+      .match({ patient_id, doctor_id, status: 'revoked' });
     if (error) throw error;
   }
 

@@ -48,6 +48,14 @@ export default async function DashboardPage() {
     revalidatePath('/dashboard')
   }
 
+  async function deleteConsent(doctorId: string) {
+    'use server'
+    const supabase = await createClient()
+    const dal = new DataAccessLayer(supabase)
+    await dal.deleteConsent(user!.id, doctorId)
+    revalidatePath('/dashboard')
+  }
+
   async function searchDoctors(query: string) {
     'use server'
     const supabase = await createClient()
@@ -89,6 +97,7 @@ export default async function DashboardPage() {
         signOut={signOut}
         approveConsent={approveConsent}
         revokeConsent={revokeConsent}
+        deleteConsent={deleteConsent}
         searchDoctors={searchDoctors}
       />
     )

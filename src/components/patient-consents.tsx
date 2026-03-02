@@ -1,11 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/alert-dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 interface Consent {
   id: string
@@ -22,6 +32,7 @@ interface PatientConsentsProps {
   initialConsents: any[]
   onApprove: (doctorId: string) => Promise<void>
   onRevoke: (doctorId: string) => Promise<void>
+  onDelete: (doctorId: string) => Promise<void>
   onSearchDoctors: (query: string) => Promise<any[]>
   onGrantAccess: (doctorId: string) => Promise<void>
 }
@@ -30,6 +41,7 @@ export function PatientConsents({
   initialConsents, 
   onApprove, 
   onRevoke, 
+  onDelete,
   onSearchDoctors, 
   onGrantAccess 
 }: PatientConsentsProps) {
@@ -38,17 +50,24 @@ export function PatientConsents({
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isGrantDialogOpen, setIsGrantDialogOpen] = useState(false)
 
-  const handleAction = async (doctorId: string, action: 'approve' | 'revoke' | 'grant') => {
+  useEffect(() => {
+    setConsents(initialConsents)
+  }, [initialConsents])
+
+  const handleAction = async (doctorId: string, action: 'approve' | 'revoke' | 'grant' | 'delete') => {
     setLoading(doctorId)
     try {
       if (action === 'approve' || action === 'grant') {
         await onApprove(doctorId)
-      } else {
+      } else if (action === 'revoke') {
         await onRevoke(doctorId)
+      } else if (action === 'delete') {
+        await onDelete(doctorId)
+        setConsents((prev) => prev.filter((c) => c.doctor_id !== doctorId))
       }
-      setIsDialogOpen(false)
+      setIsGrantDialogOpen(false)
     } finally {
       setLoading(null)
     }
@@ -69,7 +88,7 @@ export function PatientConsents({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Medical Access</CardTitle>
-        <Button size="sm" onClick={() => setIsDialogOpen(true)}>
+        <Button size="sm" onClick={() => setIsGrantDialogOpen(true)}>
           Grant New Access
         </Button>
       </CardHeader>
@@ -108,13 +127,46 @@ export function PatientConsents({
                     </Button>
                   )}
                   {consent.status === 'revoked' && (
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleAction(consent.doctor_id, 'approve')}
-                      disabled={loading === consent.doctor_id}
-                    >
-                      Re-grant
-                    </Button>
+                    <>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleAction(consent.doctor_id, 'approve')}
+                        disabled={loading === consent.doctor_id}
+                      >
+                        Re-grant
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger 
+                          render={
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={loading === consent.doctor_id}
+                            >
+                              Delete
+                            </Button>
+                          }
+                        />
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Access Request</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently remove the revoked access request for {consent.doctor.full_name}. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleAction(consent.doctor_id, 'delete')}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
                   )}
                 </div>
               </div>
@@ -123,7 +175,7 @@ export function PatientConsents({
         )}
 
         {/* Manual Grant Dialog Placeholder (Simulated with conditional rendering for now) */}
-        {isDialogOpen && (
+        {isGrantDialogOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <Card className="w-full max-w-md">
               <CardHeader>
@@ -158,7 +210,7 @@ export function PatientConsents({
                   ))}
                 </div>
                 <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                  <Button variant="ghost" onClick={() => setIsGrantDialogOpen(false)}>Cancel</Button>
                 </div>
               </CardContent>
             </Card>
