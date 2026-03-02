@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
@@ -15,7 +15,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -27,13 +27,34 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake can make it very hard to debug
-  // why user-sessions are being lost.
-
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  const url = request.nextUrl.clone()
+
+  // Protect Dashboard and Onboarding
+  if (user) {
+    // Check if profile exists
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile && url.pathname !== '/onboarding') {
+      return NextResponse.redirect(new URL('/onboarding', request.url))
+    }
+
+    if (profile && (url.pathname === '/login' || url.pathname === '/signup' || url.pathname === '/onboarding' || url.pathname === '/')) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  } else {
+    // No User
+    if (url.pathname.startsWith('/dashboard') || url.pathname === '/onboarding') {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+  }
 
   return supabaseResponse
 }
