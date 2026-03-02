@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_queue: {
+        Row: {
+          appointment_date: string
+          created_at: string | null
+          doctor_id: string
+          id: string
+          patient_id: string
+          queue_number: number
+          status: string | null
+        }
+        Insert: {
+          appointment_date: string
+          created_at?: string | null
+          doctor_id: string
+          id?: string
+          patient_id: string
+          queue_number: number
+          status?: string | null
+        }
+        Update: {
+          appointment_date?: string
+          created_at?: string | null
+          doctor_id?: string
+          id?: string
+          patient_id?: string
+          queue_number?: number
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_queue_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_queue_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_vault: {
         Row: {
           created_at: string | null
@@ -267,6 +312,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_next_queue_number: {
+        Args: { p_date: string; p_doctor_id: string }
+        Returns: number
+      }
       match_patient_knowledge: {
         Args: {
           match_count: number
