@@ -370,16 +370,20 @@ CREATE POLICY "Users can see their own consents." ON public.medical_consents FOR
 
 ALTER TABLE public.medical_records ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Doctors can insert medical records for their patients" ON public.medical_records FOR INSERT TO authenticated WITH CHECK ((auth.uid() = doctor_id) AND (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = medical_records.patient_id) AND (medical_consents.status = 'active'::text)))));
+CREATE POLICY "Patients can insert their own records." ON public.medical_records FOR INSERT WITH CHECK (auth.uid() = patient_id);
 CREATE POLICY "Doctors can view medical records for their patients" ON public.medical_records FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = medical_records.patient_id) AND (medical_consents.status = 'active'::text))));
 CREATE POLICY "Patients can see their own records." ON public.medical_records FOR SELECT USING (auth.uid() = patient_id);
 CREATE POLICY "Doctors can update medical records for their patients" ON public.medical_records FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = medical_records.patient_id) AND (medical_consents.status = 'active'::text))));
 CREATE POLICY "Patients can update their own records." ON public.medical_records FOR UPDATE USING (auth.uid() = patient_id);
+CREATE POLICY "Patients can delete their own records" ON public.medical_records FOR DELETE TO authenticated USING (auth.uid() = patient_id);
+CREATE POLICY "Doctors can delete records they created or for consented patients" ON public.medical_records FOR DELETE TO authenticated USING ((auth.uid() = doctor_id) OR (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = medical_records.patient_id) AND (medical_consents.status = 'active'::text)))));
 
 ALTER TABLE public.test_results ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Doctors can insert test results for their patients" ON public.test_results FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = test_results.patient_id) AND (medical_consents.status = 'active'::text))));
 CREATE POLICY "Doctors can view test results for their patients" ON public.test_results FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = test_results.patient_id) AND (medical_consents.status = 'active'::text))));
 CREATE POLICY "Patients can insert their own test results." ON public.test_results FOR INSERT WITH CHECK (auth.uid() = patient_id);
 CREATE POLICY "Patients can see their own test results." ON public.test_results FOR SELECT USING (auth.uid() = patient_id);
+CREATE POLICY "Doctors can update test results for their patients" ON public.test_results FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = test_results.patient_id) AND (medical_consents.status = 'active'::text))));
 
 ALTER TABLE public.referrals ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Doctors can create referrals." ON public.referrals FOR INSERT TO authenticated WITH CHECK (auth.uid() = from_doctor_id);
@@ -403,8 +407,9 @@ CREATE TRIGGER on_referral_created AFTER INSERT ON public.referrals FOR EACH ROW
 CREATE TRIGGER tr_medical_records_fts BEFORE INSERT OR UPDATE ON public.medical_records FOR EACH ROW EXECUTE FUNCTION fn_medical_records_fts_update();
 CREATE TRIGGER tr_test_results_fts BEFORE INSERT OR UPDATE ON public.test_results FOR EACH ROW EXECUTE FUNCTION tr_test_results_fts_fn();
 
--- STORAGE (Conceptual for schema.sql)
--- INSERT INTO storage.buckets (id, name, public) VALUES ('prescriptions', 'prescriptions', false);
--- CREATE POLICY "Owners can view their own prescriptions" ON storage.objects FOR SELECT USING (auth.uid()::text = (storage.foldername(name))[1]);
--- CREATE POLICY "Consented doctors can view prescriptions" ON storage.objects FOR SELECT USING (EXISTS (SELECT 1 FROM public.medical_consents WHERE doctor_id = auth.uid() AND patient_id::text = (storage.foldername(name))[1] AND status = 'active'));
--- CREATE POLICY "Authorized users can upload prescriptions" ON storage.objects FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+-- STORAGE
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('prescriptions', 'prescriptions', false) ON CONFLICT (id) DO NOTHING;
+-- CREATE POLICY "Authorized users can upload prescriptions" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'prescriptions');
+-- CREATE POLICY "Owners can view their own prescriptions" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'prescriptions' AND (storage.foldername(name))[1] = auth.uid()::text);
+-- CREATE POLICY "Owners can delete their own prescriptions" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'prescriptions' AND (storage.foldername(name))[1] = auth.uid()::text);
+-- CREATE POLICY "Consented doctors can view prescriptions" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'prescriptions' AND EXISTS (SELECT 1 FROM public.medical_consents WHERE doctor_id = auth.uid() AND patient_id::text = (storage.foldername(name))[1] AND status = 'active'));

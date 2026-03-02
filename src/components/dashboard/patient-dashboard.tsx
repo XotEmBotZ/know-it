@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { PatientConsents } from '@/components/patient-consents'
 import { ChatUI, Message } from './chat-ui'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { chatAction } from '@/app/actions/chat-actions'
 import { SharePrescriptionDialog } from './share-prescription-dialog'
 import { EditMedicalRecordDialog } from './edit-medical-record-dialog'
 import { AddMedicalRecordDialog } from './add-medical-record-dialog'
-import { createMedicalRecordAction } from '@/app/actions/clinical-actions'
+import { AddTestResultDialog } from './add-test-result-dialog'
+import { createMedicalRecordAction, addTestResultAction, removePrescriptionImageAction } from '@/app/actions/clinical-actions'
 import { toast } from 'sonner'
 
 interface PatientDashboardProps {
@@ -83,6 +84,30 @@ export function PatientDashboard({
 			}
 		} else {
 			toast.error('Failed to add record: ' + res.error)
+		}
+	}
+
+	const handleAddTestResult = async (formData: any) => {
+		const res = await addTestResultAction(profile.id, formData)
+		if (res.success) {
+			toast.success('Test result added successfully')
+			if (refreshData) {
+				await refreshData()
+			} else {
+				window.location.reload()
+			}
+		} else {
+			toast.error('Failed to add test result: ' + res.error)
+		}
+	}
+
+	const handleRemoveImage = async (recordId: string) => {
+		const res = await removePrescriptionImageAction(recordId, profile.id)
+		if (res.success) {
+			toast.success(res.deleted ? 'Record deleted (no other content)' : 'Image removed')
+			if (refreshData) await refreshData()
+		} else {
+			toast.error('Failed to remove image: ' + res.error)
 		}
 	}
 
@@ -178,14 +203,25 @@ export function PatientDashboard({
 												<SharePrescriptionDialog medicalRecordId={record.id} />
 											</div>
 
-											{record.image_url && (
-												<div className="w-full aspect-video bg-muted rounded-md overflow-hidden border mt-2">
+											{record.signed_url && (
+												<div className="relative group w-full aspect-video bg-muted rounded-md overflow-hidden border mt-2">
 													<img 
-														src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/prescriptions/${record.image_url}`} 
+														src={record.signed_url} 
 														alt="Prescription" 
 														className="w-full h-full object-contain cursor-pointer"
-														onClick={() => window.open(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/prescriptions/${record.image_url}`, '_blank')}
+														onClick={() => window.open(record.signed_url, '_blank')}
 													/>
+													<Button 
+														variant="destructive" 
+														size="icon-xs" 
+														className="absolute top-2 right-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+														onClick={(e) => {
+															e.stopPropagation();
+															handleRemoveImage(record.id);
+														}}
+													>
+														<X className="w-3 h-3" />
+													</Button>
 												</div>
 											)}
 
@@ -217,8 +253,12 @@ export function PatientDashboard({
 					</Card>
 
 					<Card>
-						<CardHeader>
+						<CardHeader className="flex flex-row items-center justify-between">
 							<CardTitle>Test Results</CardTitle>
+							<AddTestResultDialog 
+								patientId={profile.id} 
+								onSubmit={handleAddTestResult} 
+							/>
 						</CardHeader>
 						<CardContent>
 							{tests && tests.length > 0 ? (

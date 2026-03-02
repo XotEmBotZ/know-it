@@ -63,6 +63,11 @@ export default async function DashboardPage() {
 		return dal.searchDoctor(query)
 	}
 
+	async function refreshDashboard() {
+		'use server'
+		revalidatePath('/dashboard')
+	}
+
 	// --- Doctor Actions ---
 	async function searchPatients(query: string) {
 		'use server'
@@ -118,6 +123,7 @@ export default async function DashboardPage() {
 					revokeConsent={revokeConsent}
 					deleteConsent={deleteConsent}
 					searchDoctors={searchDoctors}
+					refreshData={refreshDashboard}
 				/>
 			) : (
 				<DoctorDashboard

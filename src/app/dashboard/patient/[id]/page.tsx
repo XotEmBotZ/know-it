@@ -6,7 +6,7 @@ import { DataAccessLayer } from '@/lib/dal'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
-import { ChevronLeft, User, FileText, Clipboard, MessageSquare, Loader2, Bot } from 'lucide-react'
+import { ChevronLeft, User, FileText, Clipboard, MessageSquare, Loader2, Bot, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { AddMedicalRecordDialog } from '@/components/dashboard/add-medical-record-dialog'
 import { EditMedicalRecordDialog } from '@/components/dashboard/edit-medical-record-dialog'
@@ -14,7 +14,7 @@ import { AddTestResultDialog } from '@/components/dashboard/add-test-result-dial
 import { ReferSpecialistDialog } from '@/components/dashboard/refer-specialist-dialog'
 import { ChatUI } from '@/components/dashboard/chat-ui'
 import { cn } from '@/lib/utils'
-import { createMedicalRecordAction, addTestResultAction } from '@/app/actions/clinical-actions'
+import { createMedicalRecordAction, addTestResultAction, removePrescriptionImageAction } from '@/app/actions/clinical-actions'
 import { chatAction } from '@/app/actions/chat-actions'
 import { toast } from 'sonner'
 import { Message } from '@/components/dashboard/chat-ui'
@@ -149,6 +149,17 @@ export default function PatientHistoryPage({
     }
   }
 
+  const handleRemoveImage = async (recordId: string) => {
+    if (!patientId) return
+    const res = await removePrescriptionImageAction(recordId, patientId)
+    if (res.success) {
+      toast.success(res.deleted ? 'Record deleted (no other content)' : 'Image removed')
+      await refreshData()
+    } else {
+      toast.error('Failed to remove image: ' + res.error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -277,14 +288,25 @@ export default function PatientHistoryPage({
                       </div>
                     </CardHeader>
                     <CardContent className="text-sm space-y-4">
-                      {record.image_url && (
-                        <div className="w-full aspect-video bg-muted rounded-md overflow-hidden border">
+                      {record.signed_url && (
+                        <div className="relative group w-full aspect-video bg-muted rounded-md overflow-hidden border">
                           <img 
-                            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/prescriptions/${record.image_url}`} 
+                            src={record.signed_url} 
                             alt="Prescription" 
                             className="w-full h-full object-contain cursor-pointer"
-                            onClick={() => window.open(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/prescriptions/${record.image_url}`, '_blank')}
+                            onClick={() => window.open(record.signed_url, '_blank')}
                           />
+                          <Button 
+                            variant="destructive" 
+                            size="icon-xs" 
+                            className="absolute top-2 right-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveImage(record.id);
+                            }}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
                         </div>
                       )}
 

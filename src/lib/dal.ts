@@ -75,6 +75,14 @@ export class DataAccessLayer {
     return data as Profile;
   }
 
+  async getPrescriptionUrl(path: string): Promise<string | null> {
+    const { data, error } = await this.supabase.storage
+      .from('prescriptions')
+      .createSignedUrl(path, 3600); // 1 hour
+    if (error) return null;
+    return data.signedUrl;
+  }
+
   // --- Patient Side ---
   
   async getPatientHistory(patientId: string): Promise<any[]> {
@@ -85,7 +93,16 @@ export class DataAccessLayer {
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return data;
+
+    const recordsWithUrls = await Promise.all((data || []).map(async (record) => {
+      if (record.image_url) {
+        const signedUrl = await this.getPrescriptionUrl(record.image_url);
+        return { ...record, signed_url: signedUrl };
+      }
+      return record;
+    }));
+
+    return recordsWithUrls;
   }
 
   async getPatientTests(patientId: string): Promise<TestResult[]> {
@@ -241,6 +258,13 @@ export class DataAccessLayer {
     const { data, error } = await this.supabase
       .rpc('get_record_by_token', { p_token_id: tokenId });
     if (error) throw error;
-    return data?.[0] || null;
+    const record = data?.[0] || null;
+    
+    if (record && record.image_url) {
+      const signedUrl = await this.getPrescriptionUrl(record.image_url);
+      return { ...record, signed_url: signedUrl };
+    }
+    
+    return record;
   }
 }

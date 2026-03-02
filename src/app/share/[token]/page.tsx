@@ -139,13 +139,13 @@ export default function SharePage({
                 </div>
               </CardHeader>
               <CardContent className="space-y-8 pt-6">
-                {record.image_url && (
+                {record.signed_url && (
                   <div className="w-full bg-muted rounded-lg overflow-hidden border">
                     <img 
-                      src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/prescriptions/${record.image_url}`} 
+                      src={record.signed_url} 
                       alt="Prescription Photo" 
                       className="w-full object-contain cursor-pointer max-h-[500px]"
-                      onClick={() => window.open(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/prescriptions/${record.image_url}`, '_blank')}
+                      onClick={() => window.open(record.signed_url, '_blank')}
                     />
                     <div className="p-2 bg-muted/50 text-center">
                       <p className="text-xs text-muted-foreground">Original Prescription Photo (Click to enlarge)</p>
