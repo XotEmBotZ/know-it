@@ -60,3 +60,24 @@ export async function getRecordByTokenAction(tokenId: string) {
     return { success: false, error: message }
   }
 }
+
+export async function updateRecordByTokenAction(tokenId: string, data: { symptoms: string, solutions: string, suggested_tests: string[] }) {
+  try {
+    const supabase = await createClient()
+    const { data: success, error } = await supabase.rpc('update_record_by_token', {
+      p_token_id: tokenId,
+      p_symptoms: data.symptoms,
+      p_solutions: data.solutions,
+      p_suggested_tests: data.suggested_tests
+    })
+
+    if (error) throw error
+    if (!success) throw new Error('Failed to update record. Link might be expired.')
+
+    return { success: true }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Failed to update record by token:', error)
+    return { success: false, error: message }
+  }
+}

@@ -9,6 +9,7 @@ import { MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { chatAction } from '@/app/actions/chat-actions'
 import { SharePrescriptionDialog } from './share-prescription-dialog'
+import { EditMedicalRecordDialog } from './edit-medical-record-dialog'
 
 interface PatientDashboardProps {
 	profile: any
@@ -133,27 +134,50 @@ export function PatientDashboard({
 										>
 											<div className="flex justify-between items-start">
 												<div>
-													<p className="font-semibold">
-														{record.doctor?.full_name || 'Doctor'}
-													</p>
+													<div className="flex items-center gap-2">
+														<p className="font-semibold">
+															{record.doctor?.full_name || 'Doctor'}
+														</p>
+														<EditMedicalRecordDialog 
+															record={record} 
+															patientId={profile.id} 
+															onSubmitSuccess={() => window.location.reload()} 
+														/>
+													</div>
 													<p className="text-sm text-muted-foreground">
 														{new Date(record.date).toLocaleDateString()}
 													</p>
 												</div>
 												<SharePrescriptionDialog medicalRecordId={record.id} />
 											</div>
-											<p className="text-sm">
-												<span className="font-medium">
-													Symptoms and Diagnosis:
-												</span>{' '}
-												{record.symptoms}
-											</p>
-											<p className="text-sm">
-												<span className="font-medium">
-													Prescriptions and Remedies:
-												</span>{' '}
-												{record.solutions}
-											</p>
+
+											{record.image_url && (
+												<div className="w-full aspect-video bg-muted rounded-md overflow-hidden border mt-2">
+													<img 
+														src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/prescriptions/${record.image_url}`} 
+														alt="Prescription" 
+														className="w-full h-full object-contain cursor-pointer"
+														onClick={() => window.open(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/prescriptions/${record.image_url}`, '_blank')}
+													/>
+												</div>
+											)}
+
+											{record.symptoms && (
+												<p className="text-sm">
+													<span className="font-medium">
+														Symptoms and Diagnosis:
+													</span>{' '}
+													<span className="whitespace-pre-wrap">{record.symptoms}</span>
+												</p>
+											)}
+											{record.solutions && (
+												<p className="text-sm">
+													<span className="font-medium">
+														Prescriptions and Remedies:
+													</span>{' '}
+													<span className="whitespace-pre-wrap">{record.solutions}</span>
+												</p>
+											)}
 										</div>
 									))}
 								</div>

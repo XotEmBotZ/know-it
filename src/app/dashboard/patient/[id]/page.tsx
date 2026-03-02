@@ -6,9 +6,10 @@ import { DataAccessLayer } from '@/lib/dal'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
-import { ChevronLeft, Calendar, User, FileText, Clipboard, MessageSquare, Loader2, Bot } from 'lucide-react'
+import { ChevronLeft, User, FileText, Clipboard, MessageSquare, Loader2, Bot } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { AddMedicalRecordDialog } from '@/components/dashboard/add-medical-record-dialog'
+import { EditMedicalRecordDialog } from '@/components/dashboard/edit-medical-record-dialog'
 import { AddTestResultDialog } from '@/components/dashboard/add-test-result-dialog'
 import { ReferSpecialistDialog } from '@/components/dashboard/refer-specialist-dialog'
 import { ChatUI } from '@/components/dashboard/chat-ui'
@@ -258,9 +259,16 @@ export default function PatientHistoryPage({
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-base">
-                            {record.date ? new Date(record.date).toLocaleDateString() : 'N/A'}
-                          </CardTitle>
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-base">
+                              {record.date ? new Date(record.date).toLocaleDateString() : 'N/A'}
+                            </CardTitle>
+                            <EditMedicalRecordDialog 
+                              record={record} 
+                              patientId={patientId!} 
+                              onSubmitSuccess={refreshData} 
+                            />
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             By Dr. {record.doctor?.full_name || 'Unknown'}
                           </p>
@@ -269,15 +277,28 @@ export default function PatientHistoryPage({
                       </div>
                     </CardHeader>
                     <CardContent className="text-sm space-y-4">
-                      <div>
-                        <p className="font-semibold">Symptoms and Diagnosis</p>
-                        <p className="text-muted-foreground">{record.symptoms}</p>
-                      </div>
+                      {record.image_url && (
+                        <div className="w-full aspect-video bg-muted rounded-md overflow-hidden border">
+                          <img 
+                            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/prescriptions/${record.image_url}`} 
+                            alt="Prescription" 
+                            className="w-full h-full object-contain cursor-pointer"
+                            onClick={() => window.open(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/prescriptions/${record.image_url}`, '_blank')}
+                          />
+                        </div>
+                      )}
+
+                      {record.symptoms && (
+                        <div>
+                          <p className="font-semibold">Symptoms and Diagnosis</p>
+                          <p className="text-muted-foreground whitespace-pre-wrap">{record.symptoms}</p>
+                        </div>
+                      )}
                       
                       {record.solutions && (
                         <div>
                           <p className="font-semibold">Prescriptions and Remedies</p>
-                          <p className="text-muted-foreground">{record.solutions}</p>
+                          <p className="text-muted-foreground whitespace-pre-wrap">{record.solutions}</p>
                         </div>
                       )}
 

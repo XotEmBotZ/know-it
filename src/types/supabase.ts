@@ -43,6 +43,7 @@ export type Database = {
           symptoms: string | null
           solutions: string | null
           suggested_tests: string[] | null
+          image_url: string | null
           symptoms_embedding: string | null
           solutions_embedding: string | null
           fts_tokens: any | null
@@ -56,6 +57,7 @@ export type Database = {
           symptoms?: string | null
           solutions?: string | null
           suggested_tests?: string[] | null
+          image_url?: string | null
           symptoms_embedding?: string | null
           solutions_embedding?: string | null
           fts_tokens?: any | null
@@ -69,6 +71,7 @@ export type Database = {
           symptoms?: string | null
           solutions?: string | null
           suggested_tests?: string[] | null
+          image_url?: string | null
           symptoms_embedding?: string | null
           solutions_embedding?: string | null
           fts_tokens?: any | null
@@ -326,8 +329,18 @@ export type Database = {
           symptoms: string
           solutions: string
           suggested_tests: string[]
+          image_url: string
           expires_at: string
         }[]
+      }
+      update_record_by_token: {
+        Args: {
+          p_token_id: string
+          p_symptoms: string
+          p_solutions: string
+          p_suggested_tests: string[]
+        }
+        Returns: boolean
       }
       match_patient_knowledge_hybrid: {
         Args: {

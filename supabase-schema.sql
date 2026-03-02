@@ -211,6 +211,7 @@ RETURNS TABLE (
     symptoms text,
     solutions text,
     suggested_tests text[],
+    image_url text,
     expires_at timestamp with time zone
 ) 
 LANGUAGE plpgsql
@@ -227,6 +228,7 @@ BEGIN
         mr.symptoms,
         mr.solutions,
         mr.suggested_tests,
+        mr.image_url,
         tat.expires_at
     FROM public.temporary_access_tokens tat
     JOIN public.medical_records mr ON mr.id = tat.medical_record_id
@@ -234,6 +236,39 @@ BEGIN
     LEFT JOIN public.profiles d ON d.id = mr.doctor_id
     WHERE tat.id = p_token_id
     AND tat.expires_at > now();
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.update_record_by_token(
+    p_token_id uuid,
+    p_symptoms text,
+    p_solutions text,
+    p_suggested_tests text[]
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+    v_record_id uuid;
+BEGIN
+    SELECT medical_record_id INTO v_record_id
+    FROM public.temporary_access_tokens
+    WHERE id = p_token_id AND expires_at > now();
+
+    IF v_record_id IS NULL THEN
+        RETURN false;
+    END IF;
+
+    UPDATE public.medical_records
+    SET 
+        symptoms = p_symptoms,
+        solutions = p_solutions,
+        suggested_tests = p_suggested_tests
+    WHERE id = v_record_id;
+
+    RETURN true;
 END;
 $$;
 
@@ -255,6 +290,7 @@ CREATE TABLE public.medical_records (
     symptoms text,
     solutions text,
     suggested_tests text[],
+    image_url text,
     created_at timestamp with time zone DEFAULT now(),
     fts_tokens tsvector,
     symptoms_embedding vector(1536),
@@ -336,6 +372,8 @@ ALTER TABLE public.medical_records ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Doctors can insert medical records for their patients" ON public.medical_records FOR INSERT TO authenticated WITH CHECK ((auth.uid() = doctor_id) AND (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = medical_records.patient_id) AND (medical_consents.status = 'active'::text)))));
 CREATE POLICY "Doctors can view medical records for their patients" ON public.medical_records FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = medical_records.patient_id) AND (medical_consents.status = 'active'::text))));
 CREATE POLICY "Patients can see their own records." ON public.medical_records FOR SELECT USING (auth.uid() = patient_id);
+CREATE POLICY "Doctors can update medical records for their patients" ON public.medical_records FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = medical_records.patient_id) AND (medical_consents.status = 'active'::text))));
+CREATE POLICY "Patients can update their own records." ON public.medical_records FOR UPDATE USING (auth.uid() = patient_id);
 
 ALTER TABLE public.test_results ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Doctors can insert test results for their patients" ON public.test_results FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM medical_consents WHERE ((medical_consents.doctor_id = auth.uid()) AND (medical_consents.patient_id = test_results.patient_id) AND (medical_consents.status = 'active'::text))));
@@ -364,3 +402,9 @@ CREATE POLICY "Doctors can see tokens for their patients" ON public.temporary_ac
 CREATE TRIGGER on_referral_created AFTER INSERT ON public.referrals FOR EACH ROW EXECUTE FUNCTION handle_referral_consent();
 CREATE TRIGGER tr_medical_records_fts BEFORE INSERT OR UPDATE ON public.medical_records FOR EACH ROW EXECUTE FUNCTION fn_medical_records_fts_update();
 CREATE TRIGGER tr_test_results_fts BEFORE INSERT OR UPDATE ON public.test_results FOR EACH ROW EXECUTE FUNCTION tr_test_results_fts_fn();
+
+-- STORAGE (Conceptual for schema.sql)
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('prescriptions', 'prescriptions', false);
+-- CREATE POLICY "Owners can view their own prescriptions" ON storage.objects FOR SELECT USING (auth.uid()::text = (storage.foldername(name))[1]);
+-- CREATE POLICY "Consented doctors can view prescriptions" ON storage.objects FOR SELECT USING (EXISTS (SELECT 1 FROM public.medical_consents WHERE doctor_id = auth.uid() AND patient_id::text = (storage.foldername(name))[1] AND status = 'active'));
+-- CREATE POLICY "Authorized users can upload prescriptions" ON storage.objects FOR INSERT WITH CHECK (auth.role() = 'authenticated');

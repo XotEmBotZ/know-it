@@ -26,15 +26,51 @@ export async function createMedicalRecordAction(patientId: string, data: any) {
       symptoms: data.symptoms,
       solutions: data.solutions,
       suggested_tests: data.suggested_tests,
+      image_url: data.image_url,
       symptoms_embedding: symptomsEmbedding as any,
       solutions_embedding: solutionsEmbedding as any,
     })
 
     revalidatePath(`/dashboard/patient/${patientId}`)
     return { success: true }
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('Failed to create and index medical record:', error)
-    return { success: false, error: "Medical indexing failed. Record was not saved." }
+    return { success: false, error: "Medical indexing failed. Record was not saved: " + message }
+  }
+}
+
+export async function updateMedicalRecordAction(recordId: string, patientId: string, data: any) {
+  try {
+    const supabase = await createClient()
+    const dal = new DataAccessLayer(supabase)
+
+    // Generate new embeddings for updated text
+    const [symptomsEmbedding, solutionsEmbedding] = await Promise.all([
+      generateEmbedding(data.symptoms || ''),
+      generateEmbedding(data.solutions || ''),
+    ]);
+
+    const { error } = await supabase
+      .from('medical_records')
+      .update({
+        symptoms: data.symptoms,
+        solutions: data.solutions,
+        suggested_tests: data.suggested_tests,
+        symptoms_embedding: symptomsEmbedding as any,
+        solutions_embedding: solutionsEmbedding as any,
+      })
+      .eq('id', recordId)
+
+    if (error) throw error
+
+    revalidatePath(`/dashboard/patient/${patientId}`)
+    revalidatePath(`/dashboard`)
+    return { success: true }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Failed to update medical record:', error)
+    return { success: false, error: message }
   }
 }
 
