@@ -18,7 +18,6 @@ export async function createMedicalRecordAction(patientId: string, data: any) {
     const dal = new DataAccessLayer(supabase)
 
     // 2. Insert record WITH embeddings.
-    // The DAL uses the Database type, which now includes these columns.
     await dal.createMedicalRecord({
       patient_id: patientId,
       doctor_id: data.doctor_id,
@@ -183,5 +182,26 @@ export async function addTestResultAction(patientId: string, data: any) {
   } catch (error) {
     console.error('Failed to create and index test result:', error)
     return { success: false, error: "Test result indexing failed. Record was not saved." }
+  }
+}
+
+export async function globalCaseSearchAction(query: string, type: 'symptoms' | 'diagnosis') {
+  try {
+    const embedding = await generateEmbedding(query);
+    const supabase = await createClient();
+    
+    const { data, error } = await supabase.rpc('match_global_clinical_cases', {
+      query_embedding: embedding,
+      query_text: query, // Pass raw text for keyword fallback
+      match_threshold: 0.3,
+      match_count: 50,
+      search_type: type
+    });
+
+    if (error) throw error;
+    return { success: true, results: data };
+  } catch (error) {
+    console.error('Global search failed:', error);
+    return { success: false, error: "Semantic search failed." };
   }
 }

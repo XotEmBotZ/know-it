@@ -13,6 +13,7 @@ import { createClient } from '@/utils/supabase/client'
 import { ChatUI } from './chat-ui'
 import { MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SemanticCaseSearch } from './semantic-case-search'
 
 interface DoctorDashboardProps {
 	profile: any
@@ -130,19 +131,22 @@ export function DoctorDashboard({
 					</TabsContent>
 
 					<TabsContent value="patients" id="tab-content-patients">
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-							<DoctorConsents
-								consents={consents}
-								onViewHistory={viewHistory}
-								onDeleteConsent={deleteConsent}
-							/>
-							<DoctorPatientSearch
-								initialResults={[]}
-								onSearch={searchPatients}
-								onRequestAccess={requestAccess}
-								onDeleteConsent={deleteConsent}
-								existingConsents={consents}
-							/>
+						<div className="flex flex-col gap-6">
+							<SemanticCaseSearch />
+							<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+								<DoctorConsents
+									consents={consents}
+									onViewHistory={viewHistory}
+									onDeleteConsent={deleteConsent}
+								/>
+								<DoctorPatientSearch
+									initialResults={[]}
+									onSearch={searchPatients}
+									onRequestAccess={requestAccess}
+									onDeleteConsent={deleteConsent}
+									existingConsents={consents}
+								/>
+							</div>
 						</div>
 					</TabsContent>
 

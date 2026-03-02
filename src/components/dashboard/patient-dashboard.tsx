@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { PatientConsents } from '@/components/patient-consents'
@@ -49,6 +49,12 @@ export function PatientDashboard({
 }: PatientDashboardProps) {
 	const metadata = profile.metadata as any
 	const [isChatOpen, setIsChatOpen] = useState(false)
+	const [mounted, setMounted] = useState(false)
+
+	useEffect(() => {
+		setMounted(true)
+	}, [])
+
 	const [messages, setMessages] = useState<Message[]>([
 		{
 			role: 'system',
@@ -139,6 +145,14 @@ export function PatientDashboard({
     return res
   }
 
+	const formatDate = (dateStr: string) => {
+		if (!mounted) return '' // Return empty or a stable placeholder during SSR
+		try {
+			return new Date(dateStr).toLocaleDateString()
+		} catch (e) {
+			return dateStr
+		}
+	}
 	return (
 		<div className="flex-1 w-full flex flex-row h-screen overflow-hidden relative" suppressHydrationWarning>
 			{/* Main Content Area */}
@@ -307,7 +321,7 @@ export function PatientDashboard({
 											<div className="flex justify-between items-start">
 												<p className="font-semibold">{test.test_name}</p>
 												<p className="text-sm text-muted-foreground">
-													{new Date(test.date).toLocaleDateString()}
+													{formatDate(test.date)}
 												</p>
 											</div>
 											<p className="text-sm">

@@ -12,7 +12,7 @@ export async function chatAction(
   patientName: string, 
   query: string, 
   history: Message[], 
-  role: 'doctor' | 'patient' = 'doctor',
+  role: 'doctor' | 'patient' | 'analyser' = 'doctor',
   fullHistory: boolean = false
 ) {
   try {
@@ -22,14 +22,14 @@ export async function chatAction(
     // 1. Retrieve clinical context
     let context = '';
     
-    if (role === 'doctor' && fullHistory) {
-      // Fetch EVERYTHING for full analysis
+    if (role === 'analyser' || (role === 'doctor' && fullHistory)) {
+      // Fetch EVERYTHING for full treatment analysis
       const [allHistory, allTests] = await Promise.all([
         dal.getPatientHistory(patientId),
         dal.getPatientTests(patientId)
       ]);
 
-      let fullContext = 'FULL MEDICAL HISTORY:\n';
+      let fullContext = 'FULL MEDICAL HISTORY FOR TREATMENT ANALYSIS:\n';
       allHistory.forEach((h, i) => {
         const dateStr = h.date ? new Date(h.date).toLocaleDateString() : 'Unknown Date';
         fullContext += `\n[RECORD - Date: ${dateStr}] Symptoms: ${h.symptoms} | Solutions: ${h.solutions}`;

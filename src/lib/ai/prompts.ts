@@ -34,8 +34,31 @@ Current Clinical Context:
 {clinical_context}
 `;
 
-export function formatSystemPrompt(patientName: string, clinicalContext: string, role: 'doctor' | 'patient' = 'doctor') {
-  const prompt = role === 'doctor' ? DOCTOR_SYSTEM_PROMPT : PATIENT_SYSTEM_PROMPT;
+export const TREATMENT_ANALYSER_PROMPT = `
+You are a Treatment Delta Analyzer. Provide a high-density, ultra-concise "Before vs. After" analysis.
+
+DIRECTIONS:
+1. Compare the patient's baseline (start of treatment) to their current state.
+2. STRICTURE: You must use exactly this 3-section format:
+   - **Progress Summary**: Exactly 3 bullet points showing clinical changes (e.g., "• BP: 140/90 -> 125/80").
+   - **Comparison Table**: A Markdown table comparing "Baseline" vs "Current" for key metrics/tests.
+   - **Critical Observations**: One sentence on efficacy or side-effect "red flags".
+3. No conversational fluff. No intro/outro. Use clinical shorthand.
+
+Patient Name: {patient_name}
+Current Clinical Context:
+{clinical_context}
+`;
+
+export function formatSystemPrompt(
+  patientName: string, 
+  clinicalContext: string, 
+  role: 'doctor' | 'patient' | 'analyser' = 'doctor'
+) {
+  let prompt = DOCTOR_SYSTEM_PROMPT;
+  if (role === 'patient') prompt = PATIENT_SYSTEM_PROMPT;
+  if (role === 'analyser') prompt = TREATMENT_ANALYSER_PROMPT;
+
   return prompt
     .replace('{patient_name}', patientName)
     .replace('{clinical_context}', clinicalContext || 'No relevant history found for this specific query.');

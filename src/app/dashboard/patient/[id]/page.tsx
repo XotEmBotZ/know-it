@@ -42,6 +42,11 @@ export default function PatientHistoryPage({
   const [loading, setLoading] = useState(true)
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [fullHistoryEnabled, setFullHistoryEnabled] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Extract data early for use in effects/handlers
   const patientProfile = data?.patientProfile
@@ -49,6 +54,15 @@ export default function PatientHistoryPage({
   const testResults = data?.testResults || []
   const referrals = data?.referrals || []
   const user = data?.user
+
+  const formatDate = (dateStr: string) => {
+    if (!mounted) return ''
+    try {
+      return new Date(dateStr).toLocaleDateString()
+    } catch (e) {
+      return dateStr
+    }
+  }
 
   const refreshData = async () => {
     if (!patientId || !data?.user?.id) return
@@ -68,7 +82,11 @@ export default function PatientHistoryPage({
 
   const handleSendMessage = async (query: string) => {
     if (!patientId || !patientProfile) return 'Error: Patient not loaded'
-    const res = await chatAction(patientId, patientProfile.full_name, query, messages, 'doctor', fullHistoryEnabled)
+    
+    // Check if it's a treatment analysis request
+    const role = query === 'Analyze Treatment Progress' ? 'analyser' : 'doctor'
+    
+    const res = await chatAction(patientId, patientProfile.full_name, query, messages, role, fullHistoryEnabled)
     setMessages(prev => [...prev, { role: 'user', content: query }, { role: 'assistant', content: res }])
     return res
   }
@@ -234,7 +252,7 @@ export default function PatientHistoryPage({
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-emerald-900/80">
-                  Referral from <span className="font-bold">{referrals[0].from_doctor?.full_name}</span> on {new Date(referrals[0].created_at).toLocaleDateString()}
+                  Referral from <span className="font-bold">{referrals[0].from_doctor?.full_name}</span> on {formatDate(referrals[0].created_at)}
                 </p>
                 <div className="p-3 bg-white/50 rounded border border-emerald-100 text-sm">
                   <p className="font-semibold text-emerald-900">Reason: {referrals[0].reason}</p>
@@ -274,7 +292,7 @@ export default function PatientHistoryPage({
                         <div>
                           <div className="flex items-center gap-2">
                             <CardTitle className="text-base">
-                              {record.date ? new Date(record.date).toLocaleDateString() : 'N/A'}
+                              {formatDate(record.date)}
                             </CardTitle>
                             <EditMedicalRecordDialog 
                               record={record} 
@@ -362,7 +380,7 @@ export default function PatientHistoryPage({
                         <CardTitle className="text-base">{result.test_name}</CardTitle>
                         {result.date && (
                           <span className="text-xs text-muted-foreground">
-                            {new Date(result.date).toLocaleDateString()}
+                            {formatDate(result.date)}
                           </span>
                         )}
                       </div>
@@ -417,9 +435,11 @@ export default function PatientHistoryPage({
             onClose={() => setIsChatOpen(false)}
             onSendMessage={handleSendMessage}
             initialMessages={messages}
+            suggestions={["Analyze Treatment Progress"]}
           />
         </div>
       </aside>
     </div>
   )
 }
+

@@ -30,6 +30,7 @@ interface ChatUIProps {
 	onClose?: () => void
 	className?: string
 	badge?: string
+	suggestions?: string[]
 }
 
 export function ChatUI({
@@ -40,6 +41,7 @@ export function ChatUI({
 	onClose,
 	className,
 	badge,
+	suggestions = [],
 }: ChatUIProps) {
 	const [messages, setMessages] = useState<Message[]>(initialMessages)
 	const [input, setInput] = useState('')
@@ -56,12 +58,12 @@ export function ChatUI({
 		}
 	}, [messages, isLoading])
 
-	const handleSend = async (e?: React.FormEvent) => {
+	const handleSend = async (e?: React.FormEvent, suggestion?: string) => {
 		e?.preventDefault()
-		if (!input.trim() || isLoading) return
+		const userMessage = suggestion || input.trim()
+		if (!userMessage || isLoading) return
 
-		const userMessage = input.trim()
-		setInput('')
+		if (!suggestion) setInput('')
 		setMessages((prev) => [...prev, { role: 'user', content: userMessage }])
 		setIsLoading(true)
 
@@ -201,7 +203,23 @@ export function ChatUI({
 				</ScrollArea>
 			</CardContent>
 
-			<CardFooter className="p-0 pt-4 shrink-0">
+			<CardFooter className="flex flex-col gap-4 p-0 pt-4 shrink-0">
+				{!isLoading && suggestions.length > 0 && (
+					<div className="flex flex-wrap gap-2 w-full">
+						{suggestions.map((suggestion, idx) => (
+							<Button
+								key={idx}
+								variant="outline"
+								size="sm"
+								onClick={() => handleSend(undefined, suggestion)}
+								className="rounded-full text-xs bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary h-8"
+							>
+								<Sparkles className="w-3 h-3 mr-1.5" />
+								{suggestion}
+							</Button>
+						))}
+					</div>
+				)}
 				<form onSubmit={handleSend} className="relative w-full group">
 					<Input
 						placeholder={placeholder}
