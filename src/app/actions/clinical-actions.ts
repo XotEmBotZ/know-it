@@ -2,7 +2,8 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { DataAccessLayer } from '@/lib/dal'
-import { generateEmbedding } from '@/lib/ai/google'
+import { generateEmbedding, chatModel } from '@/lib/ai/google'
+import { formatSystemPrompt } from '@/lib/ai/prompts'
 import { revalidatePath } from 'next/cache'
 
 export async function createMedicalRecordAction(patientId: string, data: any) {
@@ -18,7 +19,7 @@ export async function createMedicalRecordAction(patientId: string, data: any) {
     const dal = new DataAccessLayer(supabase)
 
     // 2. Insert record WITH embeddings.
-    await dal.createMedicalRecord({
+    await dal.addMedicalRecord({
       patient_id: patientId,
       doctor_id: data.doctor_id,
       date: data.date,
@@ -185,6 +186,69 @@ export async function addTestResultAction(patientId: string, data: any) {
   }
 }
 
+export async function analyzeGlobalSymptomTrendsAction(
+  symptoms: string,
+  startDate: string,
+  endDate: string
+) {
+  try {
+    const supabase = await createClient();
+    
+    // 1. Verify user role is 'doctor'
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Unauthorized');
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.role !== 'doctor') {
+      throw new Error('Unauthorized: Only doctors can access epidemiological trends.');
+    }
+
+    const embedding = await generateEmbedding(symptoms);
+
+    // 2. Fetch anonymized cases from the backend using the new security definer RPC
+    const { data: cases, error } = await supabase.rpc('match_epidemiological_cases', {
+      query_embedding: embedding,
+      query_text: symptoms,
+      start_date: startDate,
+      end_date: endDate,
+      match_threshold: 0.3,
+      match_count: 100 
+    });
+
+    if (error) throw error;
+    if (!cases || cases.length === 0) {
+      return { success: true, report: "No similar clinical cases found within the selected timeframe." };
+    }
+
+    // 3. Format the context for Gemma - STRICTLY NO NAMES OR PII
+    let clinicalContext = `ANONYMIZED TREND DATA: FOUND ${cases.length} SIMILAR CASES FROM ${startDate} TO ${endDate}:\n\n`;
+    
+    cases.forEach((c: any, i: number) => {
+      clinicalContext += `CASE #${i + 1} (Timeline: ${c.occurrence_date}):\n`;
+      clinicalContext += `- Symptoms: ${c.symptoms}\n`;
+      clinicalContext += `- Solutions/Interventions: ${c.solutions || 'None recorded'}\n`;
+      clinicalContext += `- Anonymized Demographics: ${JSON.stringify(c.patient_metadata)}\n\n`;
+    });
+
+    // 4. Call Gemma with the Epidemiologist role
+    const systemPrompt = formatSystemPrompt('Global Analysis Engine', clinicalContext, 'epidemiologist');
+    
+    const result = await chatModel.generateContent(`System Instruction: ${systemPrompt}\n\nTask: Perform a deep reasoning analysis on these anonymized cases. Identify clusters and trends.`);
+    const report = result.response.text();
+
+    return { success: true, report };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Epidemiological analysis failed:', error);
+    return { success: false, error: "Access Denied or Analysis Failed: " + message };
+  }
+}
+
 export async function globalCaseSearchAction(query: string, type: 'symptoms' | 'diagnosis') {
   try {
     const embedding = await generateEmbedding(query);
@@ -205,3 +269,4 @@ export async function globalCaseSearchAction(query: string, type: 'symptoms' | '
     return { success: false, error: "Semantic search failed." };
   }
 }
+

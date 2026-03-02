@@ -13,6 +13,7 @@ import { globalCaseSearchAction } from '@/app/actions/clinical-actions'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { GlobalTrendAnalysisDialog } from './global-trend-analysis-dialog'
 
 export function SemanticCaseSearch() {
   const [query, setQuery] = useState('')
@@ -65,9 +66,12 @@ export function SemanticCaseSearch() {
   return (
     <Card className="w-full border-primary/20 shadow-lg bg-slate-50/50">
       <CardHeader className="pb-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-          <CardTitle className="text-xl">Semantic Case Matching Engine</CardTitle>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+            <CardTitle className="text-xl">Semantic Case Matching Engine</CardTitle>
+          </div>
+          <GlobalTrendAnalysisDialog />
         </div>
         <p className="text-sm text-muted-foreground">
           Real-time clinical discovery across all anonymized cases.
@@ -115,7 +119,7 @@ export function SemanticCaseSearch() {
               Found {results.length} Matching Clinical Cases
             </h3>
             
-            <Accordion type="single" collapsible className="space-y-4">
+            <Accordion className="space-y-4">
               {results.map((item, idx) => (
                 <AccordionItem 
                   key={item.case_id || idx} 

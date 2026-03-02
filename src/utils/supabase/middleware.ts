@@ -10,7 +10,9 @@ export async function updateSession(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    console.error('Missing Supabase environment variables in middleware. Check .env file.');
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('DEBUG: Middleware missing Supabase variables!', { supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey });
+    }
     return supabaseResponse;
   }
 

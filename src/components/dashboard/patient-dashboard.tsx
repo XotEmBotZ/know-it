@@ -23,9 +23,9 @@ interface PatientDashboardProps {
 	tests: any[]
   appointments: any[]
 	signOut: () => Promise<void>
-	approveConsent: (doctorId: string) => Promise<void>
-	revokeConsent: (doctorId: string) => Promise<void>
-	deleteConsent: (doctorId: string) => Promise<void>
+	approveConsent: (doctorId: string) => Promise<any>
+	revokeConsent: (doctorId: string) => Promise<any>
+	deleteConsent: (doctorId: string) => Promise<any>
 	searchDoctors: (query: string) => Promise<any[]>
   bookAppointment: (doctorId: string, date: string) => Promise<any>
   cancelAppointment: (id: string) => Promise<any>

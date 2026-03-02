@@ -273,8 +273,9 @@ export class DataAccessLayer {
 
   // --- Queue & Scheduling ---
   async bookAppointment(doctorId: string, patientId: string, date: string) {
-    const { data: queueNumber, error: qError } = await this.supabase.rpc('get_next_queue_number', { p_doctor_id: doctorId, p_date: date });
+    const { data: queueNumberData, error: qError } = await (this.supabase as any).rpc('get_next_queue_number', { p_doctor_id: doctorId, p_date: date });
     if (qError) throw qError;
+    const queueNumber = Number(queueNumberData);
     const { data, error } = await this.supabase
       .from('appointment_queue')
       .insert({ doctor_id: doctorId, patient_id: patientId, appointment_date: date, queue_number: queueNumber, status: 'pending' })

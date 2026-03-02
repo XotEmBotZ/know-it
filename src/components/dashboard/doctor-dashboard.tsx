@@ -22,9 +22,9 @@ interface DoctorDashboardProps {
 	upcoming: any[]
 	signOut: () => Promise<void>
 	searchPatients: (query: string) => Promise<any[]>
-	requestAccess: (patientId: string) => Promise<void>
-	deleteConsent: (patientId: string) => Promise<void>
-	viewHistory: (patientId: string) => Promise<void>
+	requestAccess: (patientId: string) => Promise<any>
+	deleteConsent: (patientId: string) => Promise<any>
+	viewHistory: (patientId: string) => Promise<any>
 	markDone: (id: string) => Promise<any>
 	skipPatient: (id: string) => Promise<any>
 }
