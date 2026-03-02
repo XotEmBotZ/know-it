@@ -5,7 +5,6 @@ export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type MedicalRecord = Database['public']['Tables']['medical_records']['Row'];
 export type TestResult = Database['public']['Tables']['test_results']['Row'];
 export type MedicalConsent = Database['public']['Tables']['medical_consents']['Row'];
-export type DocumentVault = Database['public']['Tables']['document_vault']['Row'];
 export type Referral = Database['public']['Tables']['referrals']['Row'];
 
 export class DataAccessLayer {
@@ -13,22 +12,16 @@ export class DataAccessLayer {
 
   // --- Referral System ---
 
-  /**
-   * Create a new referral from one doctor to another.
-   */
-  async createReferral(referral: Database['public']['Tables']['referrals']['Insert']) {
+  async createReferral(referral: Database['public']['Tables']['referrals']['Insert']): Promise<Referral> {
     const { data, error } = await this.supabase
       .from('referrals')
       .insert(referral)
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return data as Referral;
   }
 
-  /**
-   * Fetch referrals for a specific patient sent TO a specific doctor.
-   */
   async getReferralForDoctorAndPatient(doctorId: string, patientId: string) {
     const { data, error } = await this.supabase
       .from('referrals')
@@ -40,9 +33,6 @@ export class DataAccessLayer {
     return data;
   }
 
-  /**
-   * Fetch referrals sent TO the current doctor (Specialist side)
-   */
   async getReferralsForDoctor(doctorId: string) {
     const { data, error } = await this.supabase
       .from('referrals')
@@ -53,9 +43,6 @@ export class DataAccessLayer {
     return data;
   }
 
-  /**
-   * Fetch referrals sent BY the current doctor (Referrer side)
-   */
   async getReferralsFromDoctor(doctorId: string) {
     const { data, error } = await this.supabase
       .from('referrals')
@@ -66,10 +53,7 @@ export class DataAccessLayer {
     return data;
   }
 
-  /**
-   * Search for specialists to refer to
-   */
-  async searchSpecialists(query: string) {
+  async searchSpecialists(query: string): Promise<Profile[]> {
     const { data, error } = await this.supabase
       .from('profiles')
       .select('*')
@@ -77,70 +61,23 @@ export class DataAccessLayer {
       .ilike('full_name', `%${query}%`)
       .limit(10);
     if (error) throw error;
-    return data;
-  }
-
-  // --- Unified Intelligence Layer ---
-
-  /**
-   * Fetch all documents for a patient (Fragmented data origin)
-   */
-  async getPatientDocuments(patientId: string) {
-    const { data, error } = await this.supabase
-      .from('document_vault')
-      .select('*')
-      .eq('patient_id', patientId)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data;
-  }
-
-  /**
-   * Upload and register a new fragmented document
-   */
-  async registerDocument(doc: Database['public']['Tables']['document_vault']['Insert']) {
-    const { data, error } = await this.supabase
-      .from('document_vault')
-      .insert(doc)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  }
-
-  /**
-   * Perform a unified similarity search across records and documents.
-   * Calls the RPC function 'match_patient_knowledge'
-   */
-  async matchPatientKnowledge(patientId: string, embedding: number[], threshold = 0.5, limit = 5) {
-    const { data, error } = await this.supabase.rpc('match_patient_knowledge', {
-      query_embedding: `[${embedding.join(',')}]`,
-      match_threshold: threshold,
-      match_count: limit,
-      p_patient_id: patientId
-    });
-    if (error) throw error;
-    return data;
+    return data as Profile[];
   }
 
   // --- Common ---
-  async getProfile(userId: string) {
+  async getProfile(userId: string): Promise<Profile | null> {
     const { data, error } = await this.supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
-    if (error) throw error;
-    return data;
+    if (error) return null;
+    return data as Profile;
   }
 
   // --- Patient Side ---
   
-  /**
-   * Fetch all medical history for the current patient.
-   * Useful for AI context or home remedy suggestions.
-   */
-  async getPatientHistory(patientId: string) {
+  async getPatientHistory(patientId: string): Promise<any[]> {
     const { data, error } = await this.supabase
       .from('medical_records')
       .select('*, doctor:profiles!medical_records_doctor_id_fkey(full_name)')
@@ -151,10 +88,7 @@ export class DataAccessLayer {
     return data;
   }
 
-  /**
-   * Fetch all test results for the current patient.
-   */
-  async getPatientTests(patientId: string) {
+  async getPatientTests(patientId: string): Promise<TestResult[]> {
     const { data, error } = await this.supabase
       .from('test_results')
       .select('*')
@@ -162,12 +96,9 @@ export class DataAccessLayer {
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return data;
+    return data as TestResult[];
   }
 
-  /**
-   * Manage consents (Patient gives permission to a Doctor)
-   */
   async grantConsent(patientId: string, doctorId: string) {
     const { data, error } = await this.supabase
       .from('medical_consents')
@@ -209,9 +140,6 @@ export class DataAccessLayer {
 
   // --- Doctor Side ---
 
-  /**
-   * Search for a doctor (Patients search to grant access)
-   */
   async searchDoctor(query: string) {
     const { data, error } = await this.supabase
       .from('profiles')
@@ -223,9 +151,6 @@ export class DataAccessLayer {
     return data;
   }
 
-  /**
-   * Request consent from a patient (Doctor initiates)
-   */
   async requestConsent(doctorId: string, patientId: string) {
     const { data, error } = await this.supabase
       .from('medical_consents')
@@ -249,9 +174,6 @@ export class DataAccessLayer {
     return data;
   }
 
-  /**
-   * Search for a patient (Doctors search by name/email to request consent)
-   */
   async searchPatient(query?: string) {
     let q = this.supabase
       .from('profiles')
@@ -267,11 +189,7 @@ export class DataAccessLayer {
     return data;
   }
 
-  /**
-   * Fetch a patient's history IF consent exists.
-   * Supabase RLS will automatically enforce the consent check based on our policies.
-   */
-  async getPatientHistoryWithConsent(patientId: string) {
+  async getPatientHistoryWithConsent(patientId: string): Promise<MedicalRecord[]> {
     const { data, error } = await this.supabase
       .from('medical_records')
       .select('*')
@@ -279,32 +197,26 @@ export class DataAccessLayer {
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return data;
+    return data as MedicalRecord[];
   }
 
-  /**
-   * Write a new prescription (Medical Record)
-   */
-  async createMedicalRecord(record: Database['public']['Tables']['medical_records']['Insert']) {
+  async createMedicalRecord(record: Database['public']['Tables']['medical_records']['Insert']): Promise<MedicalRecord> {
     const { data, error } = await this.supabase
       .from('medical_records')
       .insert(record)
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return data as MedicalRecord;
   }
 
-  /**
-   * Add test results for a patient
-   */
-  async addTestResult(test: Database['public']['Tables']['test_results']['Insert']) {
+  async addTestResult(test: Database['public']['Tables']['test_results']['Insert']): Promise<TestResult> {
     const { data, error } = await this.supabase
       .from('test_results')
       .insert(test)
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return data as TestResult;
   }
 }
