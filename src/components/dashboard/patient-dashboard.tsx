@@ -28,6 +28,7 @@ interface PatientDashboardProps {
 	deleteConsent: (doctorId: string) => Promise<void>
 	searchDoctors: (query: string) => Promise<any[]>
   bookAppointment: (doctorId: string, date: string) => Promise<any>
+  cancelAppointment: (id: string) => Promise<any>
 	refreshData?: () => Promise<void>
 }
 
@@ -43,6 +44,7 @@ export function PatientDashboard({
 	deleteConsent,
 	searchDoctors,
   bookAppointment,
+  cancelAppointment,
 	refreshData,
 }: PatientDashboardProps) {
 	const metadata = profile.metadata as any
@@ -127,6 +129,16 @@ export function PatientDashboard({
     return res
   }
 
+  const handleCancelAppointment = async (id: string) => {
+    const res = await cancelAppointment(id)
+    if (res.success) {
+      if (refreshData) await refreshData()
+    } else {
+      toast.error(res.error || 'Failed to cancel appointment')
+    }
+    return res
+  }
+
 	return (
 		<div className="flex-1 w-full flex flex-row h-screen overflow-hidden relative">
 			{/* Main Content Area */}
@@ -184,7 +196,10 @@ export function PatientDashboard({
 				</div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PatientAppointments appointments={appointments} />
+          <PatientAppointments 
+            appointments={appointments} 
+            onCancel={handleCancelAppointment}
+          />
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">

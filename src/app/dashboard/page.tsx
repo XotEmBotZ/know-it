@@ -28,6 +28,7 @@ export default async function DashboardPage() {
   let history: any[] = []
   let tests: any[] = []
   let queue: any[] = []
+  let upcoming: any[] = []
   let patientAppointments: any[] = []
 
   try {
@@ -40,7 +41,11 @@ export default async function DashboardPage() {
       tests = await dal.getPatientTests(user.id)
       patientAppointments = await dal.getPatientAppointments(user.id)
     } else {
-      queue = await dal.getDoctorActiveQueue(user.id)
+      const allAppointments = await dal.getDoctorAllPendingAppointments(user.id)
+      const todayStr = new Date().toISOString().split('T')[0]
+      
+      queue = allAppointments.filter(a => a.appointment_date === todayStr)
+      upcoming = allAppointments.filter(a => a.appointment_date > todayStr)
     }
   } catch (error) {
     console.error('DashboardPage: Failed to fetch dashboard data', error)
@@ -61,12 +66,14 @@ export default async function DashboardPage() {
 					deleteConsent={actions.deleteConsent}
 					searchDoctors={actions.searchDoctors}
           bookAppointment={actions.bookAppointment}
+          cancelAppointment={actions.cancelAppointment}
 				/>
 			) : (
 				<DoctorDashboard
 					profile={profile}
 					consents={consents}
           queue={queue}
+          upcoming={upcoming}
 					signOut={actions.signOut}
 					searchPatients={actions.searchPatients}
 					requestAccess={actions.requestAccess}

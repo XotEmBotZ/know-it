@@ -116,6 +116,17 @@ export async function bookAppointment(doctorId: string, date: string) {
   }
 }
 
+export async function cancelAppointment(id: string) {
+  try {
+    const { dal, userId } = await getAuthenticatedDAL()
+    await dal.cancelAppointment(id, userId)
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to cancel appointment' }
+  }
+}
+
 export async function createReferral(data: any) {
   try {
     const { dal } = await getAuthenticatedDAL()

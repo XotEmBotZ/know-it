@@ -2,26 +2,44 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, Clock, MapPin, AlertTriangle, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Calendar, Clock, MapPin, AlertTriangle, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 interface PatientAppointmentsProps {
   appointments: any[]
+  onCancel?: (id: string) => Promise<any>
 }
 
-export function PatientAppointments({ appointments }: PatientAppointmentsProps) {
+export function PatientAppointments({ appointments, onCancel }: PatientAppointmentsProps) {
+  const safeAppointments = appointments || []
   const [queueAhead, setQueueAhead] = useState<Record<string, number>>({})
+  const [cancelling, setCancelling] = useState<string | null>(null)
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     async function fetchDetails() {
-      const doctorIds = [...new Set((appointments || []).map(a => a.doctor_id))].filter(Boolean)
+      const doctorIds = [...new Set((safeAppointments).map(a => a.doctor_id))].filter(Boolean)
       if (doctorIds.length === 0) return
 
       // Fetch queue ahead for today's appointments
       const today = new Date().toISOString().split('T')[0]
-      const todayApps = (appointments || []).filter(a => a.appointment_date === today)
+      const todayApps = (safeAppointments).filter(a => a.appointment_date === today)
       
       const aheadMap: Record<string, number> = {}
       for (const app of todayApps) {
@@ -39,9 +57,42 @@ export function PatientAppointments({ appointments }: PatientAppointmentsProps) 
     }
 
     fetchDetails()
-  }, [appointments, supabase])
 
-  const safeAppointments = appointments || []
+    // Real-time subscription for queue changes
+    const channel = supabase
+      .channel('queue_changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'appointment_queue' 
+      }, () => {
+        fetchDetails()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [appointments, supabase, safeAppointments])
+
+  const handleCancel = async (id: string) => {
+    if (!onCancel) return
+    
+    setCancelling(id)
+    try {
+      const res = await onCancel(id)
+      if (res.success) {
+        toast.success('Appointment cancelled')
+        router.refresh()
+      } else {
+        toast.error(res.error || 'Failed to cancel appointment')
+      }
+    } catch (err) {
+      toast.error('An error occurred')
+    } finally {
+      setCancelling(null)
+    }
+  }
 
   return (
     <Card>
@@ -68,9 +119,43 @@ export function PatientAppointments({ appointments }: PatientAppointmentsProps) 
                         <Badge variant="secondary" className="ml-2 font-mono">Queue #{app.queue_number}</Badge>
                       </div>
                     </div>
-                    {isToday && (
-                      <Badge variant="outline" className="border-green-500 text-green-600 animate-pulse">Today</Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isToday && (
+                        <Badge variant="outline" className="border-green-500 text-green-600 animate-pulse">Today</Badge>
+                      )}
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger 
+                          render={
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              disabled={cancelling === app.id}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Cancel Appointment?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to cancel your appointment with Dr. {app.doctor?.full_name}? This will remove you from the queue.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleCancel(app.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Yes, Cancel
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
 
                   {isToday && typeof aheadCount === 'number' && (

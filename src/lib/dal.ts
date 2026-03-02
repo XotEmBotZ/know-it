@@ -148,11 +148,18 @@ export class DataAccessLayer {
   }
 
   async revokeConsent(patientId: string, doctorId: string) {
-    const { error } = await this.supabase
+    const { error: consentError } = await this.supabase
       .from('medical_consents')
       .update({ status: 'revoked' })
       .match({ patient_id: patientId, doctor_id: doctorId });
-    if (error) throw error;
+    if (consentError) throw consentError;
+
+    // Also cancel any pending/future appointments for this doctor-patient pair
+    const { error: appError } = await this.supabase
+      .from('appointment_queue')
+      .delete()
+      .match({ patient_id: patientId, doctor_id: doctorId });
+    if (appError) throw appError;
   }
 
   async deleteConsent(patientId: string, doctorId: string) {
@@ -276,14 +283,16 @@ export class DataAccessLayer {
     return data;
   }
 
-  async getDoctorActiveQueue(doctorId: string, date: string = new Date().toISOString().split('T')[0]) {
+  async getDoctorAllPendingAppointments(doctorId: string) {
     try {
+      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await this.supabase
         .from('appointment_queue')
         .select('*, patient:profiles!appointment_queue_patient_id_fkey(full_name, id)')
         .eq('doctor_id', doctorId)
-        .eq('appointment_date', date)
         .eq('status', 'pending')
+        .gte('appointment_date', today)
+        .order('appointment_date', { ascending: true })
         .order('queue_number', { ascending: true });
       if (error) throw error;
       return data;
@@ -292,30 +301,34 @@ export class DataAccessLayer {
 
   async getPatientAppointments(patientId: string) {
     try {
+      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await this.supabase
         .from('appointment_queue')
         .select('*, doctor:profiles!appointment_queue_doctor_id_fkey(full_name, id)')
         .eq('patient_id', patientId)
-        .gte('appointment_date', new Date().toISOString().split('T')[0])
+        .eq('status', 'pending')
+        .gte('appointment_date', today)
         .order('appointment_date', { ascending: true });
       if (error) throw error;
       return data;
     } catch (e) { return []; }
   }
 
-  async markAppointmentDone(id: string) {
+  async markAppointmentDone(id: string) { 
+    const { error } = await this.supabase.from('appointment_queue').delete().eq('id', id); 
+    if (error) throw error;
+  }
+  
+  async skipAppointment(id: string) { 
+    const { error } = await this.supabase.from('appointment_queue').update({ status: 'skipped' }).eq('id', id); 
+    if (error) throw error;
+  }
+  
+  async cancelAppointment(id: string, patientId: string) {
     const { error } = await this.supabase
       .from('appointment_queue')
       .delete()
-      .eq('id', id);
-    if (error) throw error;
-  }
-
-  async skipAppointment(id: string) {
-    const { error } = await this.supabase
-      .from('appointment_queue')
-      .update({ status: 'skipped' })
-      .eq('id', id);
+      .match({ id, patient_id: patientId });
     if (error) throw error;
   }
 

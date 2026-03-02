@@ -17,6 +17,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Calendar } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 interface Consent {
@@ -55,6 +56,7 @@ export function PatientConsents({
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
   const [isGrantDialogOpen, setIsGrantDialogOpen] = useState(false)
+  const router = useRouter()
   
   // Booking state
   const [bookingDoctor, setBookingDoctor] = useState<Consent | null>(null)
@@ -88,9 +90,12 @@ export function PatientConsents({
 
       if (res && !res.success) {
         toast.error(res.error || `Failed to ${action}`)
-      } else if (res && res.success && action !== 'book') {
-        toast.success(`Successfully ${action === 'grant' ? 'requested' : action + 'd'}`)
-        setIsGrantDialogOpen(false)
+      } else {
+        if (action !== 'book') {
+          toast.success(`Successfully ${action === 'grant' ? 'requested' : action + 'd'}`)
+          setIsGrantDialogOpen(false)
+        }
+        router.refresh()
       }
     } catch (err: any) {
       toast.error(err.message || 'An unexpected error occurred')
