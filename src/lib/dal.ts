@@ -77,7 +77,8 @@ export class DataAccessLayer {
     const { error } = await this.supabase
       .from('medical_consents')
       .delete()
-      .match({ patient_id, doctor_id, status: 'revoked' });
+      .match({ patient_id, doctor_id })
+      .in('status', ['revoked', 'pending']);
     if (error) throw error;
   }
 

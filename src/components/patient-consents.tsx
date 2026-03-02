@@ -108,13 +108,46 @@ export function PatientConsents({
                 </div>
                 <div className="flex gap-2">
                   {consent.status === 'pending' && (
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleAction(consent.doctor_id, 'approve')}
-                      disabled={loading === consent.doctor_id}
-                    >
-                      Approve
-                    </Button>
+                    <>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleAction(consent.doctor_id, 'approve')}
+                        disabled={loading === consent.doctor_id}
+                      >
+                        Approve
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger 
+                          render={
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={loading === consent.doctor_id}
+                            >
+                              Cancel
+                            </Button>
+                          }
+                        />
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Cancel Access Request</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will remove the pending access request from {consent.doctor.full_name}.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Keep Request</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleAction(consent.doctor_id, 'delete')}
+                              variant="destructive"
+                            >
+                              Cancel Request
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
                   )}
                   {consent.status === 'active' && (
                     <Button 
