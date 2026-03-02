@@ -27,6 +27,20 @@ export class DataAccessLayer {
   }
 
   /**
+   * Fetch referrals for a specific patient sent TO a specific doctor.
+   */
+  async getReferralForDoctorAndPatient(doctorId: string, patientId: string) {
+    const { data, error } = await this.supabase
+      .from('referrals')
+      .select('*, from_doctor:profiles!referrals_from_doctor_id_fkey(full_name)')
+      .eq('to_doctor_id', doctorId)
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+
+  /**
    * Fetch referrals sent TO the current doctor (Specialist side)
    */
   async getReferralsForDoctor(doctorId: string) {
@@ -100,7 +114,7 @@ export class DataAccessLayer {
    */
   async matchPatientKnowledge(patientId: string, embedding: number[], threshold = 0.5, limit = 5) {
     const { data, error } = await this.supabase.rpc('match_patient_knowledge', {
-      query_embedding: embedding,
+      query_embedding: `[${embedding.join(',')}]`,
       match_threshold: threshold,
       match_count: limit,
       p_patient_id: patientId

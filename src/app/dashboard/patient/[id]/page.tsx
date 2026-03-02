@@ -63,6 +63,7 @@ export default async function PatientHistoryPage({
   let patientProfile: any = null
   let history: any[] = []
   let testResults: any[] = []
+  let referrals: any[] = []
 
   try {
     patientProfile = await dal.getProfile(patientId)
@@ -73,6 +74,7 @@ export default async function PatientHistoryPage({
   try {
     history = await dal.getPatientHistory(patientId) as any[]
     testResults = await dal.getPatientTests(patientId)
+    referrals = await dal.getReferralForDoctorAndPatient(user.id, patientId)
   } catch (err) {
     console.error('Error fetching patient records:', err)
   }
@@ -117,6 +119,39 @@ export default async function PatientHistoryPage({
           />
         </div>
       </div>
+
+      {referrals && referrals.length > 0 && (
+        <Card className="bg-emerald-50/50 border-emerald-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-emerald-700 flex items-center gap-2">
+              <Clipboard className="w-5 h-5" />
+              Incoming Referral
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Referring Doctor</p>
+                <p className="text-lg font-bold text-emerald-900">{referrals[0].from_doctor?.full_name}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Referral Date</p>
+                <p className="text-lg font-bold text-emerald-900">{new Date(referrals[0].created_at).toLocaleDateString()}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Reason for Referral</p>
+              <p className="text-emerald-900 font-medium">{referrals[0].reason}</p>
+            </div>
+            {referrals[0].notes && (
+              <div>
+                <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Clinical Notes</p>
+                <p className="text-emerald-900/80 text-sm whitespace-pre-wrap">{referrals[0].notes}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center gap-4">
@@ -179,7 +214,7 @@ export default async function PatientHistoryPage({
                     <div>
                       <p className="text-sm font-semibold">Suggested Tests</p>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {record.suggested_tests.map((test, i) => (
+                        {record.suggested_tests.map((test: string, i: number) => (
                           <Badge key={i} variant="secondary">{test}</Badge>
                         ))}
                       </div>
