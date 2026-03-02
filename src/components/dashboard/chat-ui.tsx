@@ -103,6 +103,7 @@ export function ChatUI({
 				'flex flex-col h-full border-none shadow-none bg-transparent p-0',
 				className,
 			)}
+			suppressHydrationWarning
 		>
 			<CardHeader className="py-4 px-0 flex flex-row items-center justify-between shrink-0">
 				<div className="flex items-center gap-2">

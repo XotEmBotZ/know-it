@@ -140,7 +140,7 @@ export function PatientDashboard({
   }
 
 	return (
-		<div className="flex-1 w-full flex flex-row h-screen overflow-hidden relative">
+		<div className="flex-1 w-full flex flex-row h-screen overflow-hidden relative" suppressHydrationWarning>
 			{/* Main Content Area */}
 			<div className="flex-1 flex flex-col gap-8 p-4 md:p-8 overflow-y-auto">
 				<div className="flex justify-between items-center">
