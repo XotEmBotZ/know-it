@@ -17,6 +17,8 @@ import { createMedicalRecordAction, addTestResultAction } from '@/app/actions/cl
 import { chatAction } from '@/app/actions/chat-actions'
 import { toast } from 'sonner'
 import { Message } from '@/components/dashboard/chat-ui'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 
 export default function PatientHistoryPage({
   params: paramsPromise,
@@ -34,6 +36,7 @@ export default function PatientHistoryPage({
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [fullHistoryEnabled, setFullHistoryEnabled] = useState(false)
 
   // Extract data early for use in effects/handlers
   const patientProfile = data?.patientProfile
@@ -70,7 +73,7 @@ export default function PatientHistoryPage({
 
   const handleSendMessage = async (query: string) => {
     if (!patientId || !patientProfile) return 'Error: Patient not loaded'
-    const res = await chatAction(patientId, patientProfile.full_name, query, messages)
+    const res = await chatAction(patientId, patientProfile.full_name, query, messages, 'doctor', fullHistoryEnabled)
     setMessages(prev => [...prev, { role: 'user', content: query }, { role: 'assistant', content: res }])
     return res
   }
@@ -309,11 +312,23 @@ export default function PatientHistoryPage({
 
       {/* Collapsible Sidebar / Mobile Full-screen Overlay */}
       <aside className={cn(
-        "transition-all duration-300 ease-in-out border-l bg-background flex flex-col shrink-0 z-50",
+        "transition-all duration-300 ease-in-out border-l bg-background flex flex-col shrink-0 z-50 h-full",
         "fixed inset-0 md:relative md:inset-auto",
         isChatOpen ? "w-full md:w-80 lg:w-96 translate-x-0" : "w-0 translate-x-full md:translate-x-0 overflow-hidden border-l-0"
       )}>
-        <div className="flex-1 flex flex-col p-6 min-w-[320px] md:min-w-0">
+        <div className="flex-1 flex flex-col p-6 min-w-[320px] md:min-w-0 h-full">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <div className="flex items-center space-x-2">
+              <Switch 
+                id="full-history" 
+                checked={fullHistoryEnabled}
+                onCheckedChange={setFullHistoryEnabled}
+              />
+              <Label htmlFor="full-history" className="text-xs font-medium cursor-pointer">
+                Full History Mode
+              </Label>
+            </div>
+          </div>
           <ChatUI 
             title="Case Assistant" 
             badge="Analysis"

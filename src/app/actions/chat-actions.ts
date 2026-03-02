@@ -4,23 +4,101 @@ import { chatModel } from '@/lib/ai/google'
 import { retrievePatientContext } from '@/lib/ai/retrieval'
 import { formatSystemPrompt } from '@/lib/ai/prompts'
 import { Message } from '@/components/dashboard/chat-ui'
+import { createClient } from '@/utils/supabase/server'
+import { DataAccessLayer } from '@/lib/dal'
 
-export async function chatAction(patientId: string, patientName: string, query: string, history: Message[]) {
+export async function chatAction(
+  patientId: string, 
+  patientName: string, 
+  query: string, 
+  history: Message[], 
+  role: 'doctor' | 'patient' = 'doctor',
+  fullHistory: boolean = false
+) {
   try {
-    // 1. Retrieve the most relevant clinical context based on the current query
-    const context = await retrievePatientContext(patientId, query);
+    const supabase = await createClient();
+    const dal = new DataAccessLayer(supabase);
 
-    // 2. Format the system prompt with the retrieved context
-    const systemPrompt = formatSystemPrompt(patientName, context);
+    // 1. Retrieve clinical context
+    let context = '';
+    
+    if (role === 'doctor' && fullHistory) {
+      // Fetch EVERYTHING for full analysis
+      const [allHistory, allTests] = await Promise.all([
+        dal.getPatientHistory(patientId),
+        dal.getPatientTests(patientId)
+      ]);
 
-    // 3. Construct conversation for Gemini
+      let fullContext = 'FULL MEDICAL HISTORY:\n';
+      allHistory.forEach((h, i) => {
+        fullContext += `\n[RECORD - Date: ${new Date(h.date).toLocaleDateString()}] Symptoms: ${h.symptoms} | Solutions: ${h.solutions}`;
+      });
+      allTests.forEach((t, i) => {
+        fullContext += `\n[TEST - Date: ${new Date(t.date).toLocaleDateString()}] ${t.test_name}: ${t.results}`;
+      });
+      context = fullContext;
+    } else {
+      // Use RAG for targeted search
+      context = await retrievePatientContext(patientId, query);
+
+      // 2. Explicitly add recent context to ensure dates and patterns are available
+      if (role === 'patient') {
+        const [latestHistory, latestTests] = await Promise.all([
+          dal.getPatientHistory(patientId),
+          dal.getPatientTests(patientId)
+        ]);
+
+        let latestContext = '';
+        if (latestHistory && latestHistory.length > 0) {
+          const h = latestHistory[0];
+          latestContext += `\n[LATEST MEDICAL RECORD - Date: ${new Date(h.date).toLocaleDateString()}] Symptoms: ${h.symptoms} | Solutions/Prescription: ${h.solutions}`;
+        }
+        if (latestTests && latestTests.length > 0) {
+          const t = latestTests[0];
+          latestContext += `\n[LATEST TEST RESULT - Date: ${new Date(t.date).toLocaleDateString()}] ${t.test_name}: ${t.results}`;
+        }
+
+        if (latestContext) {
+          context = `MOST RECENT DATA:${latestContext}\n\nOTHER RELEVANT HISTORY (RAG):\n${context}`;
+        }
+      } else if (role === 'doctor') {
+        const [recentHistory, recentTests] = await Promise.all([
+          dal.getPatientHistory(patientId).then(h => h.slice(0, 3)),
+          dal.getPatientTests(patientId).then(t => t.slice(0, 3))
+        ]);
+
+        let recentContext = '';
+        recentHistory.forEach((h, i) => {
+          recentContext += `\n[RECENT RECORD ${i+1} - Date: ${new Date(h.date).toLocaleDateString()}] Symptoms: ${h.symptoms} | Solutions: ${h.solutions}`;
+        });
+        recentTests.forEach((t, i) => {
+          recentContext += `\n[RECENT TEST ${i+1} - Date: ${new Date(t.date).toLocaleDateString()}] ${t.test_name}: ${t.results}`;
+        });
+
+        if (recentContext) {
+          context = `MOST RECENT RECORDS (to help find patterns and dates):${recentContext}\n\nRELEVANT SEARCH RESULTS (RAG):\n${context}`;
+        }
+      }
+    }
+
+    // 3. Format the system prompt with the retrieved context and role
+    const systemPrompt = formatSystemPrompt(patientName, context, role);
+
+    // 4. Construct conversation for Gemini
+    // GEMINI SDK REQUIREMENT: First content must be role 'user'
+    const geminiHistory = history
+      .filter(m => m.role !== 'system')
+      .map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }],
+      }));
+
+    // Find first user index
+    const firstUserIndex = geminiHistory.findIndex(m => m.role === 'user');
+    const validHistory = firstUserIndex !== -1 ? geminiHistory.slice(firstUserIndex) : [];
+
     const chat = chatModel.startChat({
-      history: history
-        .filter(m => m.role !== 'system')
-        .map(m => ({
-          role: m.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: m.content }],
-        })),
+      history: validHistory,
     });
 
     // We send the system prompt as part of the instructions if it's the first message, 

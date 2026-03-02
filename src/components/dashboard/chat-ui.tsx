@@ -129,8 +129,8 @@ export function ChatUI({
 				)}
 			</CardHeader>
 
-			<CardContent className="flex-1 overflow-hidden p-0 relative">
-				<ScrollArea className="h-full" ref={scrollRef}>
+			<CardContent className="flex-1 overflow-hidden p-0 relative min-h-0">
+				<ScrollArea className="h-full w-full" ref={scrollRef}>
 					<div className="flex flex-col gap-6 py-4">
 						{messages
 							.filter((m) => m.role !== 'system')
