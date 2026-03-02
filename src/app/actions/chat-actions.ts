@@ -1,7 +1,7 @@
 'use server'
 
 import { chatModel } from '@/lib/ai/google'
-import { retrievePatientContext } from '@/lib/ai/retrieval'
+import { retrieveClinicalAndResearchContext } from '@/lib/ai/retrieval'
 import { formatSystemPrompt } from '@/lib/ai/prompts'
 import { Message } from '@/components/dashboard/chat-ui'
 import { createClient } from '@/utils/supabase/server'
@@ -40,8 +40,8 @@ export async function chatAction(
       });
       context = fullContext;
     } else {
-      // Use RAG for targeted search
-      context = await retrievePatientContext(patientId, query);
+      // Use RAG for targeted search across records and research papers
+      context = await retrieveClinicalAndResearchContext(patientId, query);
 
       // 2. Explicitly add recent context to ensure dates and patterns are available
       if (role === 'patient') {

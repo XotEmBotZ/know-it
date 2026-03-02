@@ -34,3 +34,36 @@ export async function retrievePatientContext(patientId: string, query: string) {
     return '';
   }
 }
+
+/**
+ * Retrieves both patient history and relevant research papers.
+ */
+export async function retrieveClinicalAndResearchContext(patientId: string, query: string) {
+  const supabase = await createClient();
+  
+  try {
+    const queryEmbedding = await generateEmbedding(query, TaskType.RETRIEVAL_QUERY);
+
+    const { data: matches, error } = await supabase.rpc('match_clinical_knowledge', {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.5,
+      match_count: 8,
+      p_patient_id: patientId,
+      include_research: true
+    });
+
+    if (error) {
+      console.error('Error retrieving clinical/research context:', error);
+      return await retrievePatientContext(patientId, query); // Fallback
+    }
+
+    const context = matches
+      .map((m: any) => `[${m.source_type.toUpperCase()}] ${m.content}`)
+      .join('\n\n');
+
+    return context;
+  } catch (error) {
+    console.error('Unified retrieval failed:', error);
+    return '';
+  }
+}
