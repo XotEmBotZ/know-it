@@ -47,7 +47,7 @@ export function DoctorDashboard({
 				</form>
 			</div>
 
-			<Tabs defaultValue="queue" className="w-full">
+			<Tabs defaultValue="queue" className="w-full" id="doctor-dashboard-tabs">
 				<TabsList className="grid w-full grid-cols-3 mb-8">
 					<TabsTrigger value="queue">Active Queue</TabsTrigger>
 					<TabsTrigger value="patients">My Patients</TabsTrigger>
