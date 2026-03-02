@@ -31,7 +31,8 @@ export class DataAccessLayer {
       .from('medical_records')
       .select('*, doctor:profiles!medical_records_doctor_id_fkey(full_name)')
       .eq('patient_id', patientId)
-      .order('date', { ascending: false });
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
     if (error) throw error;
     return data;
   }
@@ -44,7 +45,8 @@ export class DataAccessLayer {
       .from('test_results')
       .select('*')
       .eq('patient_id', patientId)
-      .order('date', { ascending: false });
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
     if (error) throw error;
     return data;
   }
@@ -160,7 +162,8 @@ export class DataAccessLayer {
       .from('medical_records')
       .select('*')
       .eq('patient_id', patientId)
-      .order('date', { ascending: false });
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
     if (error) throw error;
     return data;
   }
