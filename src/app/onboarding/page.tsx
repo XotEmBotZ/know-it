@@ -33,11 +33,13 @@ export default async function OnboardingPage() {
     
     // Role specific metadata
     const dob = formData.get('dob')
+    const gender = formData.get('gender')
     const bloodGroup = formData.get('bloodGroup')
+    const specialNeeds = formData.get('specialNeeds')
     const medicalId = formData.get('medicalId')
 
     const metadata = role === 'patient' 
-      ? { dob, blood_group: bloodGroup }
+      ? { dob, gender, blood_group: bloodGroup, special_needs: specialNeeds }
       : { medical_id: medicalId }
 
     const supabase = await createClient()

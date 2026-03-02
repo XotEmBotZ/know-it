@@ -266,9 +266,30 @@ export default function PatientHistoryPage({
               <div className="bg-primary/10 p-3 rounded-full">
                 <User className="w-6 h-6 text-primary" />
               </div>
-              <div>
-                <CardTitle className="text-xl md:text-2xl">{patientProfile.full_name}</CardTitle>
-                <p className="text-muted-foreground text-sm">Patient ID: {patientId?.slice(0, 8)}...</p>
+              <div className="flex-1">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-xl md:text-2xl">{patientProfile.full_name}</CardTitle>
+                    <p className="text-muted-foreground text-sm">Patient ID: {patientId?.slice(0, 8)}...</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {patientProfile.metadata?.dob && (
+                      <Badge variant="secondary">DOB: {patientProfile.metadata.dob}</Badge>
+                    )}
+                    {patientProfile.metadata?.gender && (
+                      <Badge variant="secondary">Gender: {patientProfile.metadata.gender}</Badge>
+                    )}
+                    {patientProfile.metadata?.blood_group && (
+                      <Badge variant="secondary">Blood: {patientProfile.metadata.blood_group}</Badge>
+                    )}
+                  </div>
+                </div>
+                {patientProfile.metadata?.special_needs && (
+                  <div className="mt-3 p-2 bg-amber-50 border border-amber-100 rounded text-amber-900 text-xs">
+                    <span className="font-bold uppercase tracking-wider text-[10px] text-amber-700 block mb-1">Special Needs / Allergies</span>
+                    {patientProfile.metadata.special_needs}
+                  </div>
+                )}
               </div>
             </CardHeader>
           </Card>

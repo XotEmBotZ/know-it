@@ -19,17 +19,26 @@ export async function chatAction(
     const supabase = await createClient();
     const dal = new DataAccessLayer(supabase);
 
+    // 0. Fetch patient metadata for core context
+    const profile = await dal.getProfile(patientId);
+    const metadata = profile?.metadata as any;
+    let patientInfo = `PATIENT PROFILE:\n- Name: ${patientName}\n`;
+    if (metadata?.dob) patientInfo += `- DOB: ${metadata.dob}\n`;
+    if (metadata?.gender) patientInfo += `- Gender: ${metadata.gender}\n`;
+    if (metadata?.blood_group) patientInfo += `- Blood Group: ${metadata.blood_group}\n`;
+    if (metadata?.special_needs) patientInfo += `- Special Needs/Allergies: ${metadata.special_needs}\n`;
+
     // 1. Retrieve clinical context
     let context = '';
     
     if (role === 'analyser' || (role === 'doctor' && fullHistory)) {
-      // Fetch EVERYTHING for full treatment analysis
+      // ... (existing history fetching)
       const [allHistory, allTests] = await Promise.all([
         dal.getPatientHistory(patientId),
         dal.getPatientTests(patientId)
       ]);
 
-      let fullContext = 'FULL MEDICAL HISTORY FOR TREATMENT ANALYSIS:\n';
+      let fullContext = `${patientInfo}\nFULL MEDICAL HISTORY FOR TREATMENT ANALYSIS:\n`;
       allHistory.forEach((h, i) => {
         const dateStr = h.date ? new Date(h.date).toLocaleDateString() : 'Unknown Date';
         fullContext += `\n[RECORD - Date: ${dateStr}] Symptoms: ${h.symptoms} | Solutions: ${h.solutions}`;
@@ -63,7 +72,9 @@ export async function chatAction(
         }
 
         if (latestContext) {
-          context = `MOST RECENT DATA:${latestContext}\n\nOTHER RELEVANT HISTORY (RAG):\n${context}`;
+          context = `${patientInfo}\nMOST RECENT DATA:${latestContext}\n\nOTHER RELEVANT HISTORY (RAG):\n${context}`;
+        } else {
+          context = `${patientInfo}\n${context}`;
         }
       } else if (role === 'doctor') {
         const [recentHistory, recentTests] = await Promise.all([
@@ -82,7 +93,9 @@ export async function chatAction(
         });
 
         if (recentContext) {
-          context = `MOST RECENT RECORDS (to help find patterns and dates):${recentContext}\n\nRELEVANT SEARCH RESULTS (RAG):\n${context}`;
+          context = `${patientInfo}\nMOST RECENT RECORDS (to help find patterns and dates):${recentContext}\n\nRELEVANT SEARCH RESULTS (RAG):\n${context}`;
+        } else {
+          context = `${patientInfo}\n${context}`;
         }
       }
     }

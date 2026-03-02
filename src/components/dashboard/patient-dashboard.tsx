@@ -192,9 +192,18 @@ export function PatientDashboard({
 								<span className="font-semibold">DOB:</span> {metadata?.dob}
 							</p>
 							<p>
+								<span className="font-semibold">Gender:</span> {metadata?.gender}
+							</p>
+							<p>
 								<span className="font-semibold">Blood Group:</span>{' '}
 								{metadata?.blood_group}
 							</p>
+							{metadata?.special_needs && (
+								<p>
+									<span className="font-semibold">Special Needs:</span>{' '}
+									{metadata?.special_needs}
+								</p>
+							)}
 						</CardContent>
 					</Card>
 
