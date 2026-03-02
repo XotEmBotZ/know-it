@@ -97,12 +97,22 @@ export default async function DashboardPage() {
     ? await dal.getConsentsForPatient(user.id)
     : await dal.getConsentsForDoctor(user.id)
 
+  let history: any[] = []
+  let tests: any[] = []
+
+  if (profile.role === 'patient') {
+    history = await dal.getPatientHistory(user.id)
+    tests = await dal.getPatientTests(user.id)
+  }
+
   return (
     <>
       {profile.role === 'patient' ? (
         <PatientDashboard 
           profile={profile}
           consents={consents}
+          history={history}
+          tests={tests}
           signOut={signOut}
           approveConsent={approveConsent}
           revokeConsent={revokeConsent}
