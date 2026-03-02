@@ -10,6 +10,9 @@ import { cn } from '@/lib/utils'
 import { chatAction } from '@/app/actions/chat-actions'
 import { SharePrescriptionDialog } from './share-prescription-dialog'
 import { EditMedicalRecordDialog } from './edit-medical-record-dialog'
+import { AddMedicalRecordDialog } from './add-medical-record-dialog'
+import { createMedicalRecordAction } from '@/app/actions/clinical-actions'
+import { toast } from 'sonner'
 
 interface PatientDashboardProps {
 	profile: any
@@ -21,6 +24,7 @@ interface PatientDashboardProps {
 	revokeConsent: (doctorId: string) => Promise<void>
 	deleteConsent: (doctorId: string) => Promise<void>
 	searchDoctors: (query: string) => Promise<any[]>
+	refreshData?: () => Promise<void>
 }
 
 export function PatientDashboard({
@@ -33,6 +37,7 @@ export function PatientDashboard({
 	revokeConsent,
 	deleteConsent,
 	searchDoctors,
+	refreshData,
 }: PatientDashboardProps) {
 	const metadata = profile.metadata as any
 	const [isChatOpen, setIsChatOpen] = useState(false)
@@ -62,6 +67,23 @@ export function PatientDashboard({
 			{ role: 'assistant', content: res },
 		])
 		return res
+	}
+
+	const handleAddMedicalRecord = async (formData: any) => {
+		const res = await createMedicalRecordAction(profile.id, {
+			...formData,
+			doctor_id: profile.id, // Self-uploaded records mark themselves as doctor
+		})
+		if (res.success) {
+			toast.success('Medical record added successfully')
+			if (refreshData) {
+				await refreshData()
+			} else {
+				window.location.reload()
+			}
+		} else {
+			toast.error('Failed to add record: ' + res.error)
+		}
 	}
 
 	return (
@@ -123,6 +145,11 @@ export function PatientDashboard({
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between">
 							<CardTitle>Medical History</CardTitle>
+							<AddMedicalRecordDialog 
+								patientId={profile.id} 
+								doctorId={profile.id} 
+								onSubmit={handleAddMedicalRecord} 
+							/>
 						</CardHeader>
 						<CardContent>
 							{history && history.length > 0 ? (
@@ -141,7 +168,7 @@ export function PatientDashboard({
 														<EditMedicalRecordDialog 
 															record={record} 
 															patientId={profile.id} 
-															onSubmitSuccess={() => window.location.reload()} 
+															onSubmitSuccess={() => refreshData ? refreshData() : window.location.reload()} 
 														/>
 													</div>
 													<p className="text-sm text-muted-foreground">

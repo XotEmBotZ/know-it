@@ -32,6 +32,7 @@ export async function createMedicalRecordAction(patientId: string, data: any) {
     })
 
     revalidatePath(`/dashboard/patient/${patientId}`)
+    revalidatePath(`/dashboard`)
     return { success: true }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
