@@ -7,6 +7,8 @@ import { PatientConsents } from '@/components/patient-consents'
 interface PatientDashboardProps {
   profile: any
   consents: any[]
+  history: any[]
+  tests: any[]
   signOut: () => Promise<void>
   approveConsent: (doctorId: string) => Promise<void>
   revokeConsent: (doctorId: string) => Promise<void>
@@ -17,6 +19,8 @@ interface PatientDashboardProps {
 export function PatientDashboard({
   profile,
   consents,
+  history,
+  tests,
   signOut,
   approveConsent,
   revokeConsent,
@@ -56,9 +60,63 @@ export function PatientDashboard({
         />
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Medical History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {history && history.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {history.map((record) => (
+                  <div key={record.id} className="p-4 border rounded-lg flex flex-col gap-2">
+                    <div className="flex justify-between items-start">
+                      <p className="font-semibold">{record.doctor?.full_name || 'Doctor'}</p>
+                      <p className="text-sm text-muted-foreground">{new Date(record.date).toLocaleDateString()}</p>
+                    </div>
+                    <p className="text-sm"><span className="font-medium">Symptoms:</span> {record.symptoms}</p>
+                    <p className="text-sm"><span className="font-medium">Solutions:</span> {record.solutions}</p>
+                    {record.suggested_tests && record.suggested_tests.length > 0 && (
+                      <p className="text-sm">
+                        <span className="font-medium">Suggested Tests:</span> {record.suggested_tests.join(', ')}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No medical history found.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Test Results</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {tests && tests.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {tests.map((test) => (
+                  <div key={test.id} className="p-4 border rounded-lg flex flex-col gap-2">
+                    <div className="flex justify-between items-start">
+                      <p className="font-semibold">{test.test_name}</p>
+                      <p className="text-sm text-muted-foreground">{new Date(test.date).toLocaleDateString()}</p>
+                    </div>
+                    <p className="text-sm"><span className="font-medium">Results:</span> {test.results}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No test results found.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 gap-6">
         <div className="p-12 rounded-lg border border-dashed flex items-center justify-center text-muted-foreground text-center">
-          Your medical history and AI health chat will appear here.
+          AI health chat and other insights will appear here.
         </div>
       </div>
     </div>

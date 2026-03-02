@@ -128,12 +128,23 @@ export async function SignupForm({
               </FieldDescription>
             </FieldGroup>
           </form>
-          <div className="bg-muted relative hidden md:block">
-            <img
-              src="/placeholder.svg"
-              alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-            />
+          <div className="bg-slate-50 relative hidden md:flex items-center justify-center p-8 overflow-hidden border-l">
+            {/* Professional Blue Accent in Top Left */}
+            <div className="absolute top-0 left-0 w-64 h-64 bg-blue-600/10 rounded-br-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
+            
+            <div className="relative z-10 text-center space-y-4">
+              <div className="space-y-1">
+                <h2 className="text-5xl font-black tracking-tighter uppercase flex flex-col items-center leading-none">
+                  <span className="text-[#FF9933] drop-shadow-sm">In Indians</span>
+                  <span className="text-[#000080] py-2">We Trust</span>
+                  <span className="text-[#138808] drop-shadow-sm">Jai Hind</span>
+                </h2>
+              </div>
+              <div className="h-px w-24 bg-gradient-to-r from-transparent via-slate-300 to-transparent mx-auto" />
+              <p className="text-slate-500 text-xs font-bold tracking-[0.3em] uppercase opacity-80">
+                A Vision for Bharat
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

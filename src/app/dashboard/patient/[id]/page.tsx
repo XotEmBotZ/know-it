@@ -8,6 +8,7 @@ import { ChevronLeft, Calendar, User, FileText, Clipboard } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { AddMedicalRecordDialog } from '@/components/dashboard/add-medical-record-dialog'
 import { AddTestResultDialog } from '@/components/dashboard/add-test-result-dialog'
+import { ReferSpecialistDialog } from '@/components/dashboard/refer-specialist-dialog'
 import { revalidatePath } from 'next/cache'
 
 export default async function PatientHistoryPage({
@@ -47,6 +48,14 @@ export default async function PatientHistoryPage({
     const supabase = await createClient()
     const dal = new DataAccessLayer(supabase)
     await dal.addTestResult(data)
+    revalidatePath(`/dashboard/patient/${patientId}`)
+  }
+
+  async function createReferral(data: any) {
+    'use server'
+    const supabase = await createClient()
+    const dal = new DataAccessLayer(supabase)
+    await dal.createReferral(data)
     revalidatePath(`/dashboard/patient/${patientId}`)
   }
 
@@ -92,6 +101,11 @@ export default async function PatientHistoryPage({
           <h1 className="text-3xl font-bold">Patient History</h1>
         </div>
         <div className="flex gap-2">
+          <ReferSpecialistDialog
+            patientId={patientId}
+            fromDoctorId={user.id}
+            onSubmit={createReferral}
+          />
           <AddMedicalRecordDialog 
             patientId={patientId} 
             doctorId={user.id} 
