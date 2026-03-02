@@ -5,9 +5,109 @@ export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type MedicalRecord = Database['public']['Tables']['medical_records']['Row'];
 export type TestResult = Database['public']['Tables']['test_results']['Row'];
 export type MedicalConsent = Database['public']['Tables']['medical_consents']['Row'];
+export type DocumentVault = Database['public']['Tables']['document_vault']['Row'];
+export type Referral = Database['public']['Tables']['referrals']['Row'];
 
 export class DataAccessLayer {
   constructor(private supabase: SupabaseClient<Database>) {}
+
+  // --- Referral System ---
+
+  /**
+   * Create a new referral from one doctor to another.
+   */
+  async createReferral(referral: Database['public']['Tables']['referrals']['Insert']) {
+    const { data, error } = await this.supabase
+      .from('referrals')
+      .insert(referral)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Fetch referrals sent TO the current doctor (Specialist side)
+   */
+  async getReferralsForDoctor(doctorId: string) {
+    const { data, error } = await this.supabase
+      .from('referrals')
+      .select('*, patient:profiles!referrals_patient_id_fkey(full_name), from_doctor:profiles!referrals_from_doctor_id_fkey(full_name)')
+      .eq('to_doctor_id', doctorId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Fetch referrals sent BY the current doctor (Referrer side)
+   */
+  async getReferralsFromDoctor(doctorId: string) {
+    const { data, error } = await this.supabase
+      .from('referrals')
+      .select('*, patient:profiles!referrals_patient_id_fkey(full_name), to_doctor:profiles!referrals_to_doctor_id_fkey(full_name)')
+      .eq('from_doctor_id', doctorId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Search for specialists to refer to
+   */
+  async searchSpecialists(query: string) {
+    const { data, error } = await this.supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'doctor')
+      .ilike('full_name', `%${query}%`)
+      .limit(10);
+    if (error) throw error;
+    return data;
+  }
+
+  // --- Unified Intelligence Layer ---
+
+  /**
+   * Fetch all documents for a patient (Fragmented data origin)
+   */
+  async getPatientDocuments(patientId: string) {
+    const { data, error } = await this.supabase
+      .from('document_vault')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Upload and register a new fragmented document
+   */
+  async registerDocument(doc: Database['public']['Tables']['document_vault']['Insert']) {
+    const { data, error } = await this.supabase
+      .from('document_vault')
+      .insert(doc)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Perform a unified similarity search across records and documents.
+   * Calls the RPC function 'match_patient_knowledge'
+   */
+  async matchPatientKnowledge(patientId: string, embedding: number[], threshold = 0.5, limit = 5) {
+    const { data, error } = await this.supabase.rpc('match_patient_knowledge', {
+      query_embedding: embedding,
+      match_threshold: threshold,
+      match_count: limit,
+      p_patient_id: patientId
+    });
+    if (error) throw error;
+    return data;
+  }
 
   // --- Common ---
   async getProfile(userId: string) {
