@@ -31,10 +31,12 @@ export async function chatAction(
 
       let fullContext = 'FULL MEDICAL HISTORY:\n';
       allHistory.forEach((h, i) => {
-        fullContext += `\n[RECORD - Date: ${new Date(h.date).toLocaleDateString()}] Symptoms: ${h.symptoms} | Solutions: ${h.solutions}`;
+        const dateStr = h.date ? new Date(h.date).toLocaleDateString() : 'Unknown Date';
+        fullContext += `\n[RECORD - Date: ${dateStr}] Symptoms: ${h.symptoms} | Solutions: ${h.solutions}`;
       });
       allTests.forEach((t, i) => {
-        fullContext += `\n[TEST - Date: ${new Date(t.date).toLocaleDateString()}] ${t.test_name}: ${t.results}`;
+        const dateStr = t.date ? new Date(t.date).toLocaleDateString() : 'Unknown Date';
+        fullContext += `\n[TEST - Date: ${dateStr}] ${t.test_name}: ${t.results}`;
       });
       context = fullContext;
     } else {
@@ -51,11 +53,13 @@ export async function chatAction(
         let latestContext = '';
         if (latestHistory && latestHistory.length > 0) {
           const h = latestHistory[0];
-          latestContext += `\n[LATEST MEDICAL RECORD - Date: ${new Date(h.date).toLocaleDateString()}] Symptoms: ${h.symptoms} | Solutions/Prescription: ${h.solutions}`;
+          const dateStr = h.date ? new Date(h.date).toLocaleDateString() : 'Unknown Date';
+          latestContext += `\n[LATEST MEDICAL RECORD - Date: ${dateStr}] Symptoms: ${h.symptoms} | Solutions/Prescription: ${h.solutions}`;
         }
         if (latestTests && latestTests.length > 0) {
           const t = latestTests[0];
-          latestContext += `\n[LATEST TEST RESULT - Date: ${new Date(t.date).toLocaleDateString()}] ${t.test_name}: ${t.results}`;
+          const dateStr = t.date ? new Date(t.date).toLocaleDateString() : 'Unknown Date';
+          latestContext += `\n[LATEST TEST RESULT - Date: ${dateStr}] ${t.test_name}: ${t.results}`;
         }
 
         if (latestContext) {
@@ -69,10 +73,12 @@ export async function chatAction(
 
         let recentContext = '';
         recentHistory.forEach((h, i) => {
-          recentContext += `\n[RECENT RECORD ${i+1} - Date: ${new Date(h.date).toLocaleDateString()}] Symptoms: ${h.symptoms} | Solutions: ${h.solutions}`;
+          const dateStr = h.date ? new Date(h.date).toLocaleDateString() : 'Unknown Date';
+          recentContext += `\n[RECENT RECORD ${i+1} - Date: ${dateStr}] Symptoms: ${h.symptoms} | Solutions: ${h.solutions}`;
         });
         recentTests.forEach((t, i) => {
-          recentContext += `\n[RECENT TEST ${i+1} - Date: ${new Date(t.date).toLocaleDateString()}] ${t.test_name}: ${t.results}`;
+          const dateStr = t.date ? new Date(t.date).toLocaleDateString() : 'Unknown Date';
+          recentContext += `\n[RECENT TEST ${i+1} - Date: ${dateStr}] ${t.test_name}: ${t.results}`;
         });
 
         if (recentContext) {

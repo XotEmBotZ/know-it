@@ -67,25 +67,25 @@ export function AddMedicalRecordDialog({ patientId, doctorId, onSubmit }: AddMed
           <DialogHeader>
             <DialogTitle>Add Medical Record</DialogTitle>
             <DialogDescription>
-              Record a new visit, symptoms, and prescribed solutions for the patient.
+              Record symptoms, diagnosis, prescriptions, and remedies for the patient.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="symptoms">Symptoms</Label>
+              <Label htmlFor="symptoms">Symptoms and Diagnosis</Label>
               <Textarea
                 id="symptoms"
-                placeholder="What symptoms is the patient experiencing?"
+                placeholder="What symptoms is the patient experiencing and what is the diagnosis?"
                 value={symptoms}
                 onChange={(e) => setSymptoms(e.target.value)}
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="solutions">Diagnosis & Solutions</Label>
+              <Label htmlFor="solutions">Prescriptions and Remedies</Label>
               <Textarea
                 id="solutions"
-                placeholder="Diagnosis, medications, or advice..."
+                placeholder="List medications, dosages, and other remedies..."
                 value={solutions}
                 onChange={(e) => setSolutions(e.target.value)}
                 required

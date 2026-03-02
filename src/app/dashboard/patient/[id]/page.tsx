@@ -257,13 +257,42 @@ export default function PatientHistoryPage({
                   <Card key={record.id}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
-                        <CardTitle className="text-base">{record.date ? new Date(record.date).toLocaleDateString() : 'N/A'}</CardTitle>
+                        <div>
+                          <CardTitle className="text-base">
+                            {record.date ? new Date(record.date).toLocaleDateString() : 'N/A'}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground">
+                            By Dr. {record.doctor?.full_name || 'Unknown'}
+                          </p>
+                        </div>
                         <Badge variant="outline">Visit</Badge>
                       </div>
                     </CardHeader>
-                    <CardContent className="text-sm">
-                      <p className="font-semibold mt-2">Symptoms</p>
-                      <p className="text-muted-foreground">{record.symptoms}</p>
+                    <CardContent className="text-sm space-y-4">
+                      <div>
+                        <p className="font-semibold">Symptoms and Diagnosis</p>
+                        <p className="text-muted-foreground">{record.symptoms}</p>
+                      </div>
+                      
+                      {record.solutions && (
+                        <div>
+                          <p className="font-semibold">Prescriptions and Remedies</p>
+                          <p className="text-muted-foreground">{record.solutions}</p>
+                        </div>
+                      )}
+
+                      {record.suggested_tests && record.suggested_tests.length > 0 && (
+                        <div>
+                          <p className="font-semibold">Suggested Tests</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {record.suggested_tests.map((test: string, idx: number) => (
+                              <Badge key={idx} variant="secondary" className="text-[10px]">
+                                {test}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))
@@ -284,7 +313,14 @@ export default function PatientHistoryPage({
                 testResults.map((result: any) => (
                   <Card key={result.id}>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{result.test_name}</CardTitle>
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-base">{result.test_name}</CardTitle>
+                        {result.date && (
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(result.date).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
                     </CardHeader>
                     <CardContent className="text-sm">
                       <p className="text-muted-foreground">{result.results}</p>

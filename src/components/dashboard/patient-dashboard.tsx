@@ -139,11 +139,15 @@ export function PatientDashboard({
 												</p>
 											</div>
 											<p className="text-sm">
-												<span className="font-medium">Symptoms:</span>{' '}
+												<span className="font-medium">
+													Symptoms and Diagnosis:
+												</span>{' '}
 												{record.symptoms}
 											</p>
 											<p className="text-sm">
-												<span className="font-medium">Solutions:</span>{' '}
+												<span className="font-medium">
+													Prescriptions and Remedies:
+												</span>{' '}
 												{record.solutions}
 											</p>
 										</div>

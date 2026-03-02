@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Send, Bot, User, Loader2, Sparkles, X } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import {
 	Card,
@@ -160,13 +162,25 @@ export function ChatUI({
 									</Avatar>
 									<div
 										className={cn(
-											'px-4 py-3 rounded-2xl text-sm shadow-sm max-w-[85%]',
+											'px-4 py-3 rounded-2xl text-sm shadow-sm max-w-[85%] overflow-hidden',
 											message.role === 'assistant'
 												? 'bg-card border text-card-foreground rounded-tl-none'
 												: 'bg-primary text-primary-foreground rounded-tr-none',
 										)}
 									>
-										{message.content}
+										<div
+											className={cn(
+												'prose prose-sm max-w-none break-words',
+												message.role === 'assistant'
+													? 'dark:prose-invert'
+													: 'prose-invert',
+												'[&>p:not(:last-child)]:mb-2 [&>ul]:list-disc [&>ul]:pl-4 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:pl-4 [&>ol]:mb-2 [&>li]:mb-1 [&>h1]:text-lg [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-base [&>h2]:font-bold [&>h2]:mb-2 [&>h3]:text-sm [&>h3]:font-bold [&>h3]:mb-1 [&>code]:bg-muted [&>code]:px-1 [&>code]:rounded-sm [&>code]:text-[0.8rem] [&>pre]:bg-muted [&>pre]:p-2 [&>pre]:rounded-md [&>pre]:my-2 [&>pre]:overflow-x-auto [&>table]:border-collapse [&>table]:w-full [&>table]:my-2 [&>table_th]:border [&>table_th]:p-1 [&>table_th]:bg-muted [&>table_td]:border [&>table_td]:p-1',
+											)}
+										>
+											<ReactMarkdown remarkPlugins={[remarkGfm]}>
+												{message.content}
+											</ReactMarkdown>
+										</div>
 									</div>
 								</div>
 							))}
