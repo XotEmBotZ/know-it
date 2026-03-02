@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { PatientConsents } from '@/components/patient-consents'
 import { ChatUI, Message } from './chat-ui'
+import { PatientAppointments } from './patient-appointments'
 import { MessageSquare, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { chatAction } from '@/app/actions/chat-actions'
@@ -20,11 +21,13 @@ interface PatientDashboardProps {
 	consents: any[]
 	history: any[]
 	tests: any[]
+  appointments: any[]
 	signOut: () => Promise<void>
 	approveConsent: (doctorId: string) => Promise<void>
 	revokeConsent: (doctorId: string) => Promise<void>
 	deleteConsent: (doctorId: string) => Promise<void>
 	searchDoctors: (query: string) => Promise<any[]>
+  bookAppointment: (doctorId: string, date: string) => Promise<any>
 	refreshData?: () => Promise<void>
 }
 
@@ -33,11 +36,13 @@ export function PatientDashboard({
 	consents,
 	history,
 	tests,
+  appointments,
 	signOut,
 	approveConsent,
 	revokeConsent,
 	deleteConsent,
 	searchDoctors,
+  bookAppointment,
 	refreshData,
 }: PatientDashboardProps) {
 	const metadata = profile.metadata as any
@@ -111,6 +116,17 @@ export function PatientDashboard({
 		}
 	}
 
+  const handleBookAppointment = async (doctorId: string, date: string) => {
+    const res = await bookAppointment(doctorId, date)
+    if (res.success) {
+      toast.success('Appointment booked successfully')
+      if (refreshData) await refreshData()
+    } else {
+      toast.error(res.error || 'Failed to book appointment')
+    }
+    return res
+  }
+
 	return (
 		<div className="flex-1 w-full flex flex-row h-screen overflow-hidden relative">
 			{/* Main Content Area */}
@@ -163,95 +179,100 @@ export function PatientDashboard({
 						onDelete={deleteConsent}
 						onSearchDoctors={searchDoctors}
 						onGrantAccess={approveConsent}
+            onBookAppointment={handleBookAppointment}
 					/>
 				</div>
 
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					<Card>
-						<CardHeader className="flex flex-row items-center justify-between">
-							<CardTitle>Medical History</CardTitle>
-							<AddMedicalRecordDialog 
-								patientId={profile.id} 
-								doctorId={profile.id} 
-								onSubmit={handleAddMedicalRecord} 
-							/>
-						</CardHeader>
-						<CardContent>
-							{history && history.length > 0 ? (
-								<div className="flex flex-col gap-4">
-									{history.map((record) => (
-										<div
-											key={record.id}
-											className="p-4 border rounded-lg flex flex-col gap-2"
-										>
-											<div className="flex justify-between items-start">
-												<div>
-													<div className="flex items-center gap-2">
-														<p className="font-semibold">
-															{record.doctor?.full_name || 'Doctor'}
-														</p>
-														<EditMedicalRecordDialog 
-															record={record} 
-															patientId={profile.id} 
-															onSubmitSuccess={() => refreshData ? refreshData() : window.location.reload()} 
-														/>
-													</div>
-													<p className="text-sm text-muted-foreground">
-														{new Date(record.date).toLocaleDateString()}
-													</p>
-												</div>
-												<SharePrescriptionDialog medicalRecordId={record.id} />
-											</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <PatientAppointments appointments={appointments} />
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Medical History</CardTitle>
+              <AddMedicalRecordDialog 
+                patientId={profile.id} 
+                doctorId={profile.id} 
+                onSubmit={handleAddMedicalRecord} 
+              />
+            </CardHeader>
+            <CardContent>
+              {history && history.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                  {history.map((record) => (
+                    <div
+                      key={record.id}
+                      className="p-4 border rounded-lg flex flex-col gap-2"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold">
+                              {record.doctor?.full_name || 'Doctor'}
+                            </p>
+                            <EditMedicalRecordDialog 
+                              record={record} 
+                              patientId={profile.id} 
+                              onSubmitSuccess={() => refreshData ? refreshData() : window.location.reload()} 
+                            />
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(record.date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <SharePrescriptionDialog medicalRecordId={record.id} />
+                      </div>
 
-											{record.signed_url && (
-												<div className="relative group w-full aspect-video bg-muted rounded-md overflow-hidden border mt-2">
-													<img 
-														src={record.signed_url} 
-														alt="Prescription" 
-														className="w-full h-full object-contain cursor-pointer"
-														onClick={() => window.open(record.signed_url, '_blank')}
-													/>
-													<Button 
-														variant="destructive" 
-														size="icon-xs" 
-														className="absolute top-2 right-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-														onClick={(e) => {
-															e.stopPropagation();
-															handleRemoveImage(record.id);
-														}}
-													>
-														<X className="w-3 h-3" />
-													</Button>
-												</div>
-											)}
+                      {record.signed_url && (
+                        <div className="relative group w-full aspect-video bg-muted rounded-md overflow-hidden border mt-2">
+                          <img 
+                            src={record.signed_url} 
+                            alt="Prescription" 
+                            className="w-full h-full object-contain cursor-pointer"
+                            onClick={() => window.open(record.signed_url, '_blank')}
+                          />
+                          <Button 
+                            variant="destructive" 
+                            size="icon-xs" 
+                            className="absolute top-2 right-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveImage(record.id);
+                            }}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
 
-											{record.symptoms && (
-												<p className="text-sm">
-													<span className="font-medium">
-														Symptoms and Diagnosis:
-													</span>{' '}
-													<span className="whitespace-pre-wrap">{record.symptoms}</span>
-												</p>
-											)}
-											{record.solutions && (
-												<p className="text-sm">
-													<span className="font-medium">
-														Prescriptions and Remedies:
-													</span>{' '}
-													<span className="whitespace-pre-wrap">{record.solutions}</span>
-												</p>
-											)}
-										</div>
-									))}
-								</div>
-							) : (
-								<p className="text-sm text-muted-foreground">
-									No medical history found.
-								</p>
-							)}
-						</CardContent>
-					</Card>
+                      {record.symptoms && (
+                        <p className="text-sm">
+                          <span className="font-medium">
+                            Symptoms and Diagnosis:
+                          </span>{' '}
+                          <span className="whitespace-pre-wrap">{record.symptoms}</span>
+                        </p>
+                      )}
+                      {record.solutions && (
+                        <p className="text-sm">
+                          <span className="font-medium">
+                            Prescriptions and Remedies:
+                          </span>{' '}
+                          <span className="whitespace-pre-wrap">{record.solutions}</span>
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No medical history found.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20">
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between">
 							<CardTitle>Test Results</CardTitle>

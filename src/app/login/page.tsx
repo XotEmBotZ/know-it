@@ -16,13 +16,11 @@ import {
 import { login } from "../auth/actions"
 
 export default function LoginPage() {
-  const [userRole, setUserRole] = useState<"patient" | "doctor">("patient")
   const [showPassword, setShowPassword] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
   const handleLogin = (formData: FormData) => {
-    formData.append("role", userRole)
     startTransition(async () => {
       try {
         await login(formData)
@@ -104,39 +102,6 @@ export default function LoginPage() {
           justify-content: flex-end;
           gap: 8px;
           margin-bottom: 15px;
-        }
-
-        .role-switcher {
-          display: flex;
-          background: #f3f4f6;
-          padding: 4px;
-          border-radius: 12px;
-          margin-bottom: 30px;
-          align-self: flex-start;
-        }
-
-        .role-btn {
-          padding: 6px 16px;
-          border-radius: 8px;
-          font-size: 11px;
-          font-weight: 800;
-          cursor: pointer;
-          border: none;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          transition: 0.2s;
-        }
-
-        .role-btn.active {
-          background: white;
-          color: #059669;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .role-btn.inactive {
-          background: transparent;
-          color: #9ca3af;
         }
 
         .title {
@@ -323,19 +288,6 @@ export default function LoginPage() {
               <HeartPulse size={18} color="white" />
             </div>
             <span style={{ fontWeight: 800, color: '#111', fontSize: '18px', letterSpacing: '-0.02em' }}>Cure-It</span>
-          </div>
-
-          <div className="role-switcher">
-            <button 
-              type="button"
-              className={`role-btn ${userRole === 'patient' ? 'active' : 'inactive'}`}
-              onClick={() => setUserRole('patient')}
-            ><User size={14} /> Patient</button>
-            <button 
-              type="button"
-              className={`role-btn ${userRole === 'doctor' ? 'active' : 'inactive'}`}
-              onClick={() => setUserRole('doctor')}
-            ><Stethoscope size={14} /> Doctor</button>
           </div>
 
           <h1 className="title">Sign In</h1>

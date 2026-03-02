@@ -1,9 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { DataAccessLayer } from '@/lib/dal'
-import { revalidatePath } from 'next/cache'
 import { PatientDashboard } from '@/components/dashboard/patient-dashboard'
 import { DoctorDashboard } from '@/components/dashboard/doctor-dashboard'
+import * as actions from './actions'
 
 export default async function DashboardPage() {
 	const supabase = await createClient()
@@ -23,92 +23,28 @@ export default async function DashboardPage() {
 		return redirect('/onboarding')
 	}
 
-	// --- Common Actions ---
-	async function signOut() {
-		'use server'
-		const supabase = await createClient()
-		await supabase.auth.signOut()
-		return redirect('/login')
-	}
+  // --- Data Fetching ---
+  let consents: any[] = []
+  let history: any[] = []
+  let tests: any[] = []
+  let queue: any[] = []
+  let patientAppointments: any[] = []
 
-	// --- Patient Actions ---
-	async function approveConsent(doctorId: string) {
-		'use server'
-		const supabase = await createClient()
-		const dal = new DataAccessLayer(supabase)
-		await dal.grantConsent(user!.id, doctorId)
-		revalidatePath('/dashboard')
-	}
+  try {
+    consents = profile.role === 'patient' 
+      ? await dal.getConsentsForPatient(user.id)
+      : await dal.getConsentsForDoctor(user.id)
 
-	async function revokeConsent(doctorId: string) {
-		'use server'
-		const supabase = await createClient()
-		const dal = new DataAccessLayer(supabase)
-		await dal.revokeConsent(user!.id, doctorId)
-		revalidatePath('/dashboard')
-	}
-
-	async function deleteConsent(doctorId: string) {
-		'use server'
-		const supabase = await createClient()
-		const dal = new DataAccessLayer(supabase)
-		await dal.deleteConsent(user!.id, doctorId)
-		revalidatePath('/dashboard')
-	}
-
-	async function searchDoctors(query: string) {
-		'use server'
-		const supabase = await createClient()
-		const dal = new DataAccessLayer(supabase)
-		return dal.searchDoctor(query)
-	}
-
-	async function refreshDashboard() {
-		'use server'
-		revalidatePath('/dashboard')
-	}
-
-	// --- Doctor Actions ---
-	async function searchPatients(query: string) {
-		'use server'
-		const supabase = await createClient()
-		const dal = new DataAccessLayer(supabase)
-		return dal.searchPatient(query)
-	}
-
-	async function requestAccess(patientId: string) {
-		'use server'
-		const supabase = await createClient()
-		const dal = new DataAccessLayer(supabase)
-		await dal.requestConsent(user!.id, patientId)
-		revalidatePath('/dashboard')
-	}
-
-	async function viewHistory(patientId: string) {
-		'use server'
-		redirect(`/dashboard/patient/${patientId}`)
-	}
-
-	async function doctorDeleteConsent(patientId: string) {
-		'use server'
-		const supabase = await createClient()
-		const dal = new DataAccessLayer(supabase)
-		await dal.deleteConsent(patientId, user!.id)
-		revalidatePath('/dashboard')
-	}
-
-	const consents =
-		profile.role === 'patient'
-			? await dal.getConsentsForPatient(user.id)
-			: await dal.getConsentsForDoctor(user.id)
-
-	let history: any[] = []
-	let tests: any[] = []
-
-	if (profile.role === 'patient') {
-		history = await dal.getPatientHistory(user.id)
-		tests = await dal.getPatientTests(user.id)
-	}
+    if (profile.role === 'patient') {
+      history = await dal.getPatientHistory(user.id)
+      tests = await dal.getPatientTests(user.id)
+      patientAppointments = await dal.getPatientAppointments(user.id)
+    } else {
+      queue = await dal.getDoctorActiveQueue(user.id)
+    }
+  } catch (error) {
+    console.error('DashboardPage: Failed to fetch dashboard data', error)
+  }
 
 	return (
 		<>
@@ -118,22 +54,26 @@ export default async function DashboardPage() {
 					consents={consents}
 					history={history}
 					tests={tests}
-					signOut={signOut}
-					approveConsent={approveConsent}
-					revokeConsent={revokeConsent}
-					deleteConsent={deleteConsent}
-					searchDoctors={searchDoctors}
-					refreshData={refreshDashboard}
+          appointments={patientAppointments}
+					signOut={actions.signOut}
+					approveConsent={actions.approveConsent}
+					revokeConsent={actions.revokeConsent}
+					deleteConsent={actions.deleteConsent}
+					searchDoctors={actions.searchDoctors}
+          bookAppointment={actions.bookAppointment}
 				/>
 			) : (
 				<DoctorDashboard
 					profile={profile}
 					consents={consents}
-					signOut={signOut}
-					searchPatients={searchPatients}
-					requestAccess={requestAccess}
-					deleteConsent={doctorDeleteConsent}
-					viewHistory={viewHistory}
+          queue={queue}
+					signOut={actions.signOut}
+					searchPatients={actions.searchPatients}
+					requestAccess={actions.requestAccess}
+					deleteConsent={actions.doctorDeleteConsent}
+					viewHistory={actions.viewHistory}
+          markDone={actions.markDone}
+          skipPatient={actions.skipPatient}
 				/>
 			)}
 		</>

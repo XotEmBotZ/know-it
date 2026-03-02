@@ -16,6 +16,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Calendar } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Consent {
   id: string
@@ -30,11 +32,12 @@ interface Consent {
 
 interface PatientConsentsProps {
   initialConsents: any[]
-  onApprove: (doctorId: string) => Promise<void>
-  onRevoke: (doctorId: string) => Promise<void>
-  onDelete: (doctorId: string) => Promise<void>
+  onApprove: (doctorId: string) => Promise<any>
+  onRevoke: (doctorId: string) => Promise<any>
+  onDelete: (doctorId: string) => Promise<any>
   onSearchDoctors: (query: string) => Promise<any[]>
-  onGrantAccess: (doctorId: string) => Promise<void>
+  onGrantAccess: (doctorId: string) => Promise<any>
+  onBookAppointment?: (doctorId: string, date: string) => Promise<any>
 }
 
 export function PatientConsents({ 
@@ -43,7 +46,8 @@ export function PatientConsents({
   onRevoke, 
   onDelete,
   onSearchDoctors, 
-  onGrantAccess 
+  onGrantAccess,
+  onBookAppointment,
 }: PatientConsentsProps) {
   const [consents, setConsents] = useState<Consent[]>(initialConsents)
   const [loading, setLoading] = useState<string | null>(null)
@@ -51,26 +55,57 @@ export function PatientConsents({
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
   const [isGrantDialogOpen, setIsGrantDialogOpen] = useState(false)
+  
+  // Booking state
+  const [bookingDoctor, setBookingDoctor] = useState<Consent | null>(null)
+  const [bookingDate, setBookingDate] = useState('')
 
   useEffect(() => {
     setConsents(initialConsents)
   }, [initialConsents])
 
-  const handleAction = async (doctorId: string, action: 'approve' | 'revoke' | 'grant' | 'delete') => {
+  const handleAction = async (doctorId: string, action: 'approve' | 'revoke' | 'grant' | 'delete' | 'book') => {
     setLoading(doctorId)
     try {
+      let res: any = { success: true }
       if (action === 'approve' || action === 'grant') {
-        await onApprove(doctorId)
+        res = (await onApprove(doctorId)) || res
       } else if (action === 'revoke') {
-        await onRevoke(doctorId)
+        res = (await onRevoke(doctorId)) || res
       } else if (action === 'delete') {
-        await onDelete(doctorId)
-        setConsents((prev) => prev.filter((c) => c.doctor_id !== doctorId))
+        res = (await onDelete(doctorId)) || res
+        if (res.success) {
+          setConsents((prev) => prev.filter((c) => c.doctor_id !== doctorId))
+        }
+      } else if (action === 'book') {
+        if (onBookAppointment && bookingDate) {
+          res = (await onBookAppointment(doctorId, bookingDate)) || res
+          if (res.success) {
+            closeBooking()
+          }
+        }
       }
-      setIsGrantDialogOpen(false)
+
+      if (res && !res.success) {
+        toast.error(res.error || `Failed to ${action}`)
+      } else if (res && res.success && action !== 'book') {
+        toast.success(`Successfully ${action === 'grant' ? 'requested' : action + 'd'}`)
+        setIsGrantDialogOpen(false)
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'An unexpected error occurred')
     } finally {
       setLoading(null)
     }
+  }
+
+  const openBooking = async (consent: Consent) => {
+    setBookingDoctor(consent)
+  }
+
+  const closeBooking = () => {
+    setBookingDoctor(null)
+    setBookingDate('')
   }
 
   const handleSearch = async () => {
@@ -150,14 +185,23 @@ export function PatientConsents({
                     </>
                   )}
                   {consent.status === 'active' && (
-                    <Button 
-                      size="sm" 
-                      variant="destructive"
-                      onClick={() => handleAction(consent.doctor_id, 'revoke')}
-                      disabled={loading === consent.doctor_id}
-                    >
-                      Revoke
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => openBooking(consent)}
+                      >
+                        Book
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={() => handleAction(consent.doctor_id, 'revoke')}
+                        disabled={loading === consent.doctor_id}
+                      >
+                        Revoke
+                      </Button>
+                    </div>
                   )}
                   {consent.status === 'revoked' && (
                     <>
@@ -207,7 +251,7 @@ export function PatientConsents({
           </div>
         )}
 
-        {/* Manual Grant Dialog Placeholder (Simulated with conditional rendering for now) */}
+        {/* Manual Grant Dialog Placeholder */}
         {isGrantDialogOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <Card className="w-full max-w-md">
@@ -244,6 +288,43 @@ export function PatientConsents({
                 </div>
                 <div className="flex justify-end gap-2 mt-4">
                   <Button variant="ghost" onClick={() => setIsGrantDialogOpen(false)}>Cancel</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Booking Dialog */}
+        {bookingDoctor && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <Card className="w-full max-w-md shadow-2xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  Book: {bookingDoctor.doctor.full_name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">Select Date</label>
+                  <Input 
+                    type="date" 
+                    min={new Date().toISOString().split('T')[0]} 
+                    value={bookingDate}
+                    onChange={(e) => {
+                      setBookingDate(e.target.value)
+                    }}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button variant="ghost" onClick={closeBooking}>Cancel</Button>
+                  <Button 
+                    onClick={() => handleAction(bookingDoctor.doctor_id, 'book')} 
+                    disabled={!bookingDate || loading === bookingDoctor.doctor_id}
+                  >
+                    Confirm Booking
+                  </Button>
                 </div>
               </CardContent>
             </Card>

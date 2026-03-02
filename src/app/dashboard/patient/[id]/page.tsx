@@ -12,12 +12,16 @@ import { AddMedicalRecordDialog } from '@/components/dashboard/add-medical-recor
 import { EditMedicalRecordDialog } from '@/components/dashboard/edit-medical-record-dialog'
 import { AddTestResultDialog } from '@/components/dashboard/add-test-result-dialog'
 import { ReferSpecialistDialog } from '@/components/dashboard/refer-specialist-dialog'
-import { ChatUI } from '@/components/dashboard/chat-ui'
+import { ChatUI, Message } from '@/components/dashboard/chat-ui'
 import { cn } from '@/lib/utils'
-import { createMedicalRecordAction, addTestResultAction, removePrescriptionImageAction } from '@/app/actions/clinical-actions'
+import { 
+  createReferral, 
+  addMedicalRecord, 
+  addTestResult 
+} from '@/app/dashboard/actions'
+import { removePrescriptionImageAction } from '@/app/actions/clinical-actions'
 import { chatAction } from '@/app/actions/chat-actions'
 import { toast } from 'sonner'
-import { Message } from '@/components/dashboard/chat-ui'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 
@@ -47,28 +51,18 @@ export default function PatientHistoryPage({
   const user = data?.user
 
   const refreshData = async () => {
-    if (!patientId) return
+    if (!patientId || !data?.user?.id) return
     const supabase = createClient()
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    if (!currentUser) return
-
     const dal = new DataAccessLayer(supabase)
     try {
-      const [profile, hist, tests, refs] = await Promise.all([
-        dal.getProfile(patientId),
+      const [hist, tests, refs] = await Promise.all([
         dal.getPatientHistory(patientId),
         dal.getPatientTests(patientId),
-        dal.getReferralForDoctorAndPatient(currentUser.id, patientId)
+        dal.getReferralForDoctorAndPatient(data.user.id, patientId)
       ])
-      setData({
-        patientProfile: profile,
-        history: hist as any[],
-        testResults: tests,
-        referrals: refs,
-        user: currentUser
-      })
+      setData(prev => prev ? { ...prev, history: hist, testResults: tests, referrals: refs } : null)
     } catch (err) {
-      console.error(err)
+      console.error('Failed to refresh data:', err)
     }
   }
 
@@ -93,6 +87,47 @@ export default function PatientHistoryPage({
       ])
     }
   }, [patientProfile?.id])
+
+  const handleReferral = async (referralData: any) => {
+    const res = await createReferral(referralData)
+    if (res.success) {
+      toast.success('Referral sent successfully')
+      await refreshData()
+    } else {
+      toast.error(res.error || 'Failed to send referral')
+    }
+  }
+
+  const handleAddRecord = async (recordData: any) => {
+    const res = await addMedicalRecord(recordData)
+    if (res.success) {
+      toast.success('Medical record added')
+      await refreshData()
+    } else {
+      toast.error(res.error || 'Failed to add record')
+    }
+  }
+
+  const handleAddTest = async (testData: any) => {
+    const res = await addTestResult(testData)
+    if (res.success) {
+      toast.success('Test result added')
+      await refreshData()
+    } else {
+      toast.error(res.error || 'Failed to add test result')
+    }
+  }
+
+  const handleRemoveImage = async (recordId: string) => {
+    if (!patientId) return
+    const res = await removePrescriptionImageAction(recordId, patientId)
+    if (res.success) {
+      toast.success(res.deleted ? 'Record deleted (no other content)' : 'Image removed')
+      await refreshData()
+    } else {
+      toast.error('Failed to remove image: ' + res.error)
+    }
+  }
 
   useEffect(() => {
     async function init() {
@@ -119,46 +154,13 @@ export default function PatientHistoryPage({
           user: currentUser
         })
       } catch (err) {
-        console.error(err)
+        console.error('Initialization failed:', err)
       } finally {
         setLoading(false)
       }
     }
     init()
   }, [paramsPromise])
-
-  const handleAddMedicalRecord = async (formData: any) => {
-    if (!patientId) return
-    const res = await createMedicalRecordAction(patientId, formData)
-    if (res.success) {
-      toast.success('Medical record added and indexed successfully')
-      await refreshData()
-    } else {
-      toast.error('Failed to add medical record: ' + res.error)
-    }
-  }
-
-  const handleAddTestResult = async (formData: any) => {
-    if (!patientId) return
-    const res = await addTestResultAction(patientId, formData)
-    if (res.success) {
-      toast.success('Test result added and indexed successfully')
-      await refreshData()
-    } else {
-      toast.error('Failed to add test result: ' + res.error)
-    }
-  }
-
-  const handleRemoveImage = async (recordId: string) => {
-    if (!patientId) return
-    const res = await removePrescriptionImageAction(recordId, patientId)
-    if (res.success) {
-      toast.success(res.deleted ? 'Record deleted (no other content)' : 'Image removed')
-      await refreshData()
-    } else {
-      toast.error('Failed to remove image: ' + res.error)
-    }
-  }
 
   if (loading) {
     return (
@@ -207,16 +209,16 @@ export default function PatientHistoryPage({
                 <ReferSpecialistDialog
                   patientId={patientId!}
                   fromDoctorId={user.id}
-                  onSubmit={async () => { await refreshData() }} 
+                  onSubmit={handleReferral}
                 />
                 <AddTestResultDialog
                   patientId={patientId!}
-                  onSubmit={handleAddTestResult}
+                  onSubmit={handleAddTest}
                 />
                 <AddMedicalRecordDialog 
                   patientId={patientId!} 
                   doctorId={user.id} 
-                  onSubmit={handleAddMedicalRecord} 
+                  onSubmit={handleAddRecord} 
                 />
               </div>
             </div>
