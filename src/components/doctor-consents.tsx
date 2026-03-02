@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -17,9 +18,21 @@ interface Consent {
 interface DoctorConsentsProps {
   consents: any[]
   onViewHistory: (patientId: string) => void
+  onDeleteConsent: (patientId: string) => Promise<void>
 }
 
-export function DoctorConsents({ consents, onViewHistory }: DoctorConsentsProps) {
+export function DoctorConsents({ consents, onViewHistory, onDeleteConsent }: DoctorConsentsProps) {
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  const handleDelete = async (patientId: string) => {
+    setDeleting(patientId)
+    try {
+      await onDeleteConsent(patientId)
+    } finally {
+      setDeleting(null)
+    }
+  }
+
   if (consents.length === 0) {
     return (
       <Card>
@@ -54,9 +67,22 @@ export function DoctorConsents({ consents, onViewHistory }: DoctorConsentsProps)
                     View History
                   </Button>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic px-2">
-                    {consent.status === 'pending' ? 'Waiting for approval' : 'Access Revoked'}
-                  </p>
+                  <div className="flex flex-col items-end gap-1">
+                    <p className="text-xs text-muted-foreground italic px-2">
+                      {consent.status === 'pending' ? 'Waiting for approval' : 'Access Revoked'}
+                    </p>
+                    {consent.status === 'pending' && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(consent.patient_id)}
+                        disabled={deleting === consent.patient_id}
+                      >
+                        {deleting === consent.patient_id ? 'Deleting...' : 'Delete Request'}
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

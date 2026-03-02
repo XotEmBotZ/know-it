@@ -16,6 +16,7 @@ interface DoctorPatientSearchProps {
   initialResults: PatientProfile[]
   onSearch: (query: string) => Promise<PatientProfile[]>
   onRequestAccess: (patientId: string) => Promise<void>
+  onDeleteConsent: (patientId: string) => Promise<void>
   existingConsents: any[]
 }
 
@@ -23,6 +24,7 @@ export function DoctorPatientSearch({
   initialResults, 
   onSearch, 
   onRequestAccess, 
+  onDeleteConsent,
   existingConsents 
 }: DoctorPatientSearchProps) {
   const [query, setQuery] = useState('')
@@ -54,6 +56,15 @@ export function DoctorPatientSearch({
     setRequesting(patientId)
     try {
       await onRequestAccess(patientId)
+    } finally {
+      setRequesting(null)
+    }
+  }
+
+  const handleDeleteRequest = async (patientId: string) => {
+    setRequesting(patientId)
+    try {
+      await onDeleteConsent(patientId)
     } finally {
       setRequesting(null)
     }
@@ -95,10 +106,21 @@ export function DoctorPatientSearch({
                       onClick={() => handleRequestAccess(patient.id)}
                       disabled={requesting === patient.id}
                     >
-                      Request Access
+                      {requesting === patient.id ? 'Requesting...' : 'Request Access'}
                     </Button>
                   ) : status === 'pending' ? (
-                    <p className="text-xs text-muted-foreground italic px-2">Request Pending</p>
+                    <div className="flex flex-col items-end gap-1">
+                      <p className="text-xs text-muted-foreground italic px-2">Request Pending</p>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteRequest(patient.id)}
+                        disabled={requesting === patient.id}
+                      >
+                        {requesting === patient.id ? 'Deleting...' : 'Delete Request'}
+                      </Button>
+                    </div>
                   ) : (
                     <Button size="sm" variant="outline" disabled>
                       Access Active

@@ -11,6 +11,7 @@ interface DoctorDashboardProps {
   signOut: () => Promise<void>
   searchPatients: (query: string) => Promise<any[]>
   requestAccess: (patientId: string) => Promise<void>
+  deleteConsent: (patientId: string) => Promise<void>
   viewHistory: (patientId: string) => Promise<void>
 }
 
@@ -20,6 +21,7 @@ export function DoctorDashboard({
   signOut,
   searchPatients,
   requestAccess,
+  deleteConsent,
   viewHistory,
 }: DoctorDashboardProps) {
   const metadata = profile.metadata as any
@@ -47,6 +49,7 @@ export function DoctorDashboard({
         <DoctorConsents 
           consents={consents} 
           onViewHistory={viewHistory}
+          onDeleteConsent={deleteConsent}
         />
       </div>
 
@@ -55,6 +58,7 @@ export function DoctorDashboard({
           initialResults={[]}
           onSearch={searchPatients}
           onRequestAccess={requestAccess}
+          onDeleteConsent={deleteConsent}
           existingConsents={consents}
         />
       </div>

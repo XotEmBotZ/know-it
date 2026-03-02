@@ -85,6 +85,14 @@ export default async function DashboardPage() {
     // Future: redirect(`/dashboard/patient/${patientId}`)
   }
 
+  async function doctorDeleteConsent(patientId: string) {
+    'use server'
+    const supabase = await createClient()
+    const dal = new DataAccessLayer(supabase)
+    await dal.deleteConsent(patientId, user!.id)
+    revalidatePath('/dashboard')
+  }
+
   const consents = profile.role === 'patient' 
     ? await dal.getConsentsForPatient(user.id)
     : await dal.getConsentsForDoctor(user.id)
@@ -110,6 +118,7 @@ export default async function DashboardPage() {
       signOut={signOut}
       searchPatients={searchPatients}
       requestAccess={requestAccess}
+      deleteConsent={doctorDeleteConsent}
       viewHistory={viewHistory}
     />
   )
