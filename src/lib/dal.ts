@@ -29,7 +29,7 @@ export class DataAccessLayer {
   async getPatientHistory(patientId: string) {
     const { data, error } = await this.supabase
       .from('medical_records')
-      .select('*, doctor:profiles(full_name)')
+      .select('*, doctor:profiles!medical_records_doctor_id_fkey(full_name)')
       .eq('patient_id', patientId)
       .order('date', { ascending: false });
     if (error) throw error;

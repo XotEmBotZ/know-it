@@ -4,6 +4,7 @@ import { DataAccessLayer } from '@/lib/dal'
 import { revalidatePath } from 'next/cache'
 import { PatientDashboard } from '@/components/dashboard/patient-dashboard'
 import { DoctorDashboard } from '@/components/dashboard/doctor-dashboard'
+import { ChatBot } from '@/components/chat-bot'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -81,8 +82,7 @@ export default async function DashboardPage() {
 
   async function viewHistory(patientId: string) {
     'use server'
-    console.log("Viewing history for patient:", patientId)
-    // Future: redirect(`/dashboard/patient/${patientId}`)
+    redirect(`/dashboard/patient/${patientId}`)
   }
 
   async function doctorDeleteConsent(patientId: string) {
@@ -97,29 +97,30 @@ export default async function DashboardPage() {
     ? await dal.getConsentsForPatient(user.id)
     : await dal.getConsentsForDoctor(user.id)
 
-  if (profile.role === 'patient') {
-    return (
-      <PatientDashboard 
-        profile={profile}
-        consents={consents}
-        signOut={signOut}
-        approveConsent={approveConsent}
-        revokeConsent={revokeConsent}
-        deleteConsent={deleteConsent}
-        searchDoctors={searchDoctors}
-      />
-    )
-  }
-
   return (
-    <DoctorDashboard 
-      profile={profile}
-      consents={consents}
-      signOut={signOut}
-      searchPatients={searchPatients}
-      requestAccess={requestAccess}
-      deleteConsent={doctorDeleteConsent}
-      viewHistory={viewHistory}
-    />
+    <>
+      {profile.role === 'patient' ? (
+        <PatientDashboard 
+          profile={profile}
+          consents={consents}
+          signOut={signOut}
+          approveConsent={approveConsent}
+          revokeConsent={revokeConsent}
+          deleteConsent={deleteConsent}
+          searchDoctors={searchDoctors}
+        />
+      ) : (
+        <DoctorDashboard 
+          profile={profile}
+          consents={consents}
+          signOut={signOut}
+          searchPatients={searchPatients}
+          requestAccess={requestAccess}
+          deleteConsent={doctorDeleteConsent}
+          viewHistory={viewHistory}
+        />
+      )}
+      <ChatBot />
+    </>
   )
 }
