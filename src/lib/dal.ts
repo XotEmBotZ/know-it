@@ -55,7 +55,10 @@ export class DataAccessLayer {
   async grantConsent(patientId: string, doctorId: string) {
     const { data, error } = await this.supabase
       .from('medical_consents')
-      .upsert({ patient_id: patientId, doctor_id: doctorId, status: 'active' })
+      .upsert(
+        { patient_id: patientId, doctor_id: doctorId, status: 'active' },
+        { onConflict: 'patient_id,doctor_id' }
+      )
       .select()
       .single();
     if (error) throw error;
@@ -70,18 +73,71 @@ export class DataAccessLayer {
     if (error) throw error;
   }
 
+  async getConsentsForPatient(patientId: string) {
+    const { data, error } = await this.supabase
+      .from('medical_consents')
+      .select('*, doctor:profiles!medical_consents_doctor_id_fkey(full_name, id, metadata)')
+      .eq('patient_id', patientId);
+    if (error) throw error;
+    return data;
+  }
+
   // --- Doctor Side ---
+
+  /**
+   * Search for a doctor (Patients search to grant access)
+   */
+  async searchDoctor(query: string) {
+    const { data, error } = await this.supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'doctor')
+      .or(`full_name.ilike.%${query}%,metadata->>medical_id.ilike.%${query}%`)
+      .limit(10);
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Request consent from a patient (Doctor initiates)
+   */
+  async requestConsent(doctorId: string, patientId: string) {
+    const { data, error } = await this.supabase
+      .from('medical_consents')
+      .upsert(
+        { patient_id: patientId, doctor_id: doctorId, status: 'pending' },
+        { onConflict: 'patient_id,doctor_id' }
+      )
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async getConsentsForDoctor(doctorId: string) {
+    const { data, error } = await this.supabase
+      .from('medical_consents')
+      .select('*, patient:profiles!medical_consents_patient_id_fkey(full_name, id)')
+      .eq('doctor_id', doctorId)
+      .neq('status', 'revoked');
+    if (error) throw error;
+    return data;
+  }
 
   /**
    * Search for a patient (Doctors search by name/email to request consent)
    */
-  async searchPatient(query: string) {
-    const { data, error } = await this.supabase
+  async searchPatient(query?: string) {
+    let q = this.supabase
       .from('profiles')
       .select('*')
-      .eq('role', 'patient')
-      .ilike('full_name', `%${query}%`)
-      .limit(10);
+      .eq('role', 'patient');
+    
+    if (query) {
+      q = q.ilike('full_name', `%${query}%`);
+    }
+
+    const { data, error } = await q.limit(10);
     if (error) throw error;
     return data;
   }

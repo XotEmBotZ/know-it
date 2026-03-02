@@ -1,7 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { DataAccessLayer } from '@/lib/dal'
+import { revalidatePath } from 'next/cache'
+import { PatientDashboard } from '@/components/dashboard/patient-dashboard'
+import { DoctorDashboard } from '@/components/dashboard/doctor-dashboard'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -14,12 +16,14 @@ export default async function DashboardPage() {
     return redirect('/login')
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  const dal = new DataAccessLayer(supabase)
+  const profile = await dal.getProfile(user.id)
 
+  if (!profile) {
+    return redirect('/onboarding')
+  }
+
+  // --- Common Actions ---
   async function signOut() {
     'use server'
     const supabase = await createClient()
@@ -27,39 +31,77 @@ export default async function DashboardPage() {
     return redirect('/login')
   }
 
-  const metadata = profile?.metadata as any
+  // --- Patient Actions ---
+  async function approveConsent(doctorId: string) {
+    'use server'
+    const supabase = await createClient()
+    const dal = new DataAccessLayer(supabase)
+    await dal.grantConsent(user!.id, doctorId)
+    revalidatePath('/dashboard')
+  }
+
+  async function revokeConsent(doctorId: string) {
+    'use server'
+    const supabase = await createClient()
+    const dal = new DataAccessLayer(supabase)
+    await dal.revokeConsent(user!.id, doctorId)
+    revalidatePath('/dashboard')
+  }
+
+  async function searchDoctors(query: string) {
+    'use server'
+    const supabase = await createClient()
+    const dal = new DataAccessLayer(supabase)
+    return dal.searchDoctor(query)
+  }
+
+  // --- Doctor Actions ---
+  async function searchPatients(query: string) {
+    'use server'
+    const supabase = await createClient()
+    const dal = new DataAccessLayer(supabase)
+    return dal.searchPatient(query)
+  }
+
+  async function requestAccess(patientId: string) {
+    'use server'
+    const supabase = await createClient()
+    const dal = new DataAccessLayer(supabase)
+    await dal.requestConsent(user!.id, patientId)
+    revalidatePath('/dashboard')
+  }
+
+  async function viewHistory(patientId: string) {
+    'use server'
+    console.log("Viewing history for patient:", patientId)
+    // Future: redirect(`/dashboard/patient/${patientId}`)
+  }
+
+  const consents = profile.role === 'patient' 
+    ? await dal.getConsentsForPatient(user.id)
+    : await dal.getConsentsForDoctor(user.id)
+
+  if (profile.role === 'patient') {
+    return (
+      <PatientDashboard 
+        profile={profile}
+        consents={consents}
+        signOut={signOut}
+        approveConsent={approveConsent}
+        revokeConsent={revokeConsent}
+        searchDoctors={searchDoctors}
+      />
+    )
+  }
 
   return (
-    <div className="flex-1 w-full flex flex-col gap-8 p-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Welcome, {profile?.full_name}</h1>
-        <form action={signOut}>
-          <Button type="submit" variant="outline">Sign Out</Button>
-        </form>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Info</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            <p><span className="font-semibold">Role:</span> <span className="capitalize">{profile?.role}</span></p>
-            {profile?.role === 'patient' ? (
-              <>
-                <p><span className="font-semibold">DOB:</span> {metadata?.dob}</p>
-                <p><span className="font-semibold">Blood Group:</span> {metadata?.blood_group}</p>
-              </>
-            ) : (
-              <p><span className="font-semibold">Medical ID:</span> {metadata?.medical_id}</p>
-            )}
-          </CardContent>
-        </Card>
-        
-        <div className="p-6 rounded-lg border border-dashed flex items-center justify-center text-muted-foreground text-center">
-          Dashboard features for {profile?.role} coming soon...
-        </div>
-      </div>
-    </div>
+    <DoctorDashboard 
+      profile={profile}
+      consents={consents}
+      signOut={signOut}
+      searchPatients={searchPatients}
+      requestAccess={requestAccess}
+      viewHistory={viewHistory}
+    />
   )
 }
