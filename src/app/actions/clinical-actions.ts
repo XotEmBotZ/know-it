@@ -235,7 +235,7 @@ export async function analyzeGlobalSymptomTrendsAction(
       clinicalContext += `- Anonymized Demographics: ${JSON.stringify(c.patient_metadata)}\n\n`;
     });
 
-    // 4. Call Gemini with the Epidemiologist role
+    // 4. Call Gemma with the Epidemiologist role
     const systemPrompt = formatSystemPrompt('Global Analysis Engine', clinicalContext, 'epidemiologist');
     
     const result = await chatModel.generateContent(`System Instruction: ${systemPrompt}\n\nTask: Perform a deep reasoning analysis on these anonymized cases. Identify clusters and trends.`);

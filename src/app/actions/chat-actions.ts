@@ -103,9 +103,9 @@ export async function chatAction(
     // 3. Format the system prompt with the retrieved context and role
     const systemPrompt = formatSystemPrompt(patientName, context, role);
 
-    // 4. Construct conversation for Gemini
-    // GEMINI SDK REQUIREMENT: First content must be role 'user'
-    const geminiHistory = history
+    // 4. Construct conversation for Gemma
+    // SDK REQUIREMENT: First content must be role 'user'
+    const conversationHistory = history
       .filter(m => m.role !== 'system')
       .map(m => ({
         role: m.role === 'assistant' ? 'model' : 'user',
@@ -113,8 +113,8 @@ export async function chatAction(
       }));
 
     // Find first user index
-    const firstUserIndex = geminiHistory.findIndex(m => m.role === 'user');
-    const validHistory = firstUserIndex !== -1 ? geminiHistory.slice(firstUserIndex) : [];
+    const firstUserIndex = conversationHistory.findIndex(m => m.role === 'user');
+    const validHistory = firstUserIndex !== -1 ? conversationHistory.slice(firstUserIndex) : [];
 
     const chat = chatModel.startChat({
       history: validHistory,

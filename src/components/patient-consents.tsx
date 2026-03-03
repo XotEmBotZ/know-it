@@ -104,19 +104,6 @@ export function PatientConsents({
         }
       } else if (action === 'book') {
         if (onBookAppointment && bookingDate) {
-          // Enforcement: Video call must be 1 day in advance (Emergency bypasses this)
-          if (appointmentType === 'video') {
-            const tomorrow = new Date()
-            tomorrow.setDate(tomorrow.getDate() + 1)
-            tomorrow.setHours(0, 0, 0, 0)
-            const chosenDate = new Date(bookingDate)
-            if (chosenDate < tomorrow) {
-              toast.error('Video consultations must be booked at least 1 day in advance.')
-              setLoading(null)
-              return
-            }
-          }
-
           res = (await onBookAppointment(doctorId, bookingDate, appointmentType)) || res
           if (res.success) {
             closeBooking()
@@ -370,14 +357,6 @@ export function PatientConsents({
                       In-Person
                     </Button>
                     <Button 
-                      variant={appointmentType === 'video' ? 'default' : 'outline'}
-                      size="sm"
-                      className="flex-1 min-w-[100px]"
-                      onClick={() => setAppointmentType('video')}
-                    >
-                      Video Call
-                    </Button>
-                    <Button 
                       variant={appointmentType === 'emergency' ? 'destructive' : 'outline'}
                       size="sm"
                       className={cn(
@@ -389,11 +368,6 @@ export function PatientConsents({
                       Emergency
                     </Button>
                   </div>
-                  {appointmentType === 'video' && (
-                    <p className="text-[10px] text-muted-foreground">
-                      * Video consultations must be booked at least 1 day in advance.
-                    </p>
-                  )}
                   {appointmentType === 'emergency' && (
                     <p className="text-[10px] text-red-600 font-medium">
                       * Emergency bookings prioritize your placement in the queue.

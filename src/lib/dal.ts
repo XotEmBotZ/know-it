@@ -349,7 +349,32 @@ export class DataAccessLayer {
   }
   
   async skipAppointment(id: string) { 
-    const { error } = await this.supabase.from('appointment_queue').update({ status: 'skipped' }).eq('id', id); 
+    // Get the appointment details first to know the doctor and date
+    const { data: app, error: fetchError } = await this.supabase
+      .from('appointment_queue')
+      .select('doctor_id, appointment_date')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError || !app) throw fetchError || new Error('Appointment not found');
+
+    // Get the next queue number to move to the end
+    const { data: nextQueueNumber, error: qError } = await (this.supabase as any).rpc('get_next_queue_number', { 
+      p_doctor_id: app.doctor_id, 
+      p_date: app.appointment_date 
+    });
+    
+    if (qError) throw qError;
+
+    // Update the queue number to move to the end, keep status as pending
+    const { error } = await this.supabase
+      .from('appointment_queue')
+      .update({ 
+        queue_number: Number(nextQueueNumber),
+        status: 'pending' 
+      })
+      .eq('id', id);
+
     if (error) throw error;
   }
   
