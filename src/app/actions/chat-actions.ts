@@ -1,0 +1,137 @@
+'use server'
+
+import { chatModel } from '@/lib/ai/google'
+import { retrievePatientContext } from '@/lib/ai/retrieval'
+import { formatSystemPrompt } from '@/lib/ai/prompts'
+import { Message } from '@/components/dashboard/chat-ui'
+import { createClient } from '@/utils/supabase/server'
+import { DataAccessLayer } from '@/lib/dal'
+
+export async function chatAction(
+  patientId: string, 
+  patientName: string, 
+  query: string, 
+  history: Message[], 
+  role: 'doctor' | 'patient' | 'analyser' = 'doctor',
+  fullHistory: boolean = false
+) {
+  try {
+    const supabase = await createClient();
+    const dal = new DataAccessLayer(supabase);
+
+    // 0. Fetch patient metadata for core context
+    const profile = await dal.getProfile(patientId);
+    const metadata = profile?.metadata as any;
+    let patientInfo = `PATIENT PROFILE:\n- Name: ${patientName}\n`;
+    if (metadata?.dob) patientInfo += `- DOB: ${metadata.dob}\n`;
+    if (metadata?.gender) patientInfo += `- Gender: ${metadata.gender}\n`;
+    if (metadata?.blood_group) patientInfo += `- Blood Group: ${metadata.blood_group}\n`;
+    if (metadata?.special_needs) patientInfo += `- Special Needs/Allergies: ${metadata.special_needs}\n`;
+
+    // 1. Retrieve clinical context
+    let context = '';
+    
+    if (role === 'analyser' || (role === 'doctor' && fullHistory)) {
+      // ... (existing history fetching)
+      const [allHistory, allTests] = await Promise.all([
+        dal.getPatientHistory(patientId),
+        dal.getPatientTests(patientId)
+      ]);
+
+      let fullContext = `${patientInfo}\nFULL MEDICAL HISTORY FOR TREATMENT ANALYSIS:\n`;
+      allHistory.forEach((h, i) => {
+        const dateStr = h.date ? new Date(h.date).toLocaleDateString() : 'Unknown Date';
+        fullContext += `\n[RECORD - Date: ${dateStr}] Symptoms: ${h.symptoms} | Solutions: ${h.solutions}`;
+      });
+      allTests.forEach((t, i) => {
+        const dateStr = t.date ? new Date(t.date).toLocaleDateString() : 'Unknown Date';
+        fullContext += `\n[TEST - Date: ${dateStr}] ${t.test_name}: ${t.results}`;
+      });
+      context = fullContext;
+    } else {
+      // Use RAG for targeted search
+      context = await retrievePatientContext(patientId, query);
+
+      // 2. Explicitly add recent context to ensure dates and patterns are available
+      if (role === 'patient') {
+        const [latestHistory, latestTests] = await Promise.all([
+          dal.getPatientHistory(patientId),
+          dal.getPatientTests(patientId)
+        ]);
+
+        let latestContext = '';
+        if (latestHistory && latestHistory.length > 0) {
+          const h = latestHistory[0];
+          const dateStr = h.date ? new Date(h.date).toLocaleDateString() : 'Unknown Date';
+          latestContext += `\n[LATEST MEDICAL RECORD - Date: ${dateStr}] Symptoms: ${h.symptoms} | Solutions/Prescription: ${h.solutions}`;
+        }
+        if (latestTests && latestTests.length > 0) {
+          const t = latestTests[0];
+          const dateStr = t.date ? new Date(t.date).toLocaleDateString() : 'Unknown Date';
+          latestContext += `\n[LATEST TEST RESULT - Date: ${dateStr}] ${t.test_name}: ${t.results}`;
+        }
+
+        if (latestContext) {
+          context = `${patientInfo}\nMOST RECENT DATA:${latestContext}\n\nOTHER RELEVANT HISTORY (RAG):\n${context}`;
+        } else {
+          context = `${patientInfo}\n${context}`;
+        }
+      } else if (role === 'doctor') {
+        const [recentHistory, recentTests] = await Promise.all([
+          dal.getPatientHistory(patientId).then(h => h.slice(0, 3)),
+          dal.getPatientTests(patientId).then(t => t.slice(0, 3))
+        ]);
+
+        let recentContext = '';
+        recentHistory.forEach((h, i) => {
+          const dateStr = h.date ? new Date(h.date).toLocaleDateString() : 'Unknown Date';
+          recentContext += `\n[RECENT RECORD ${i+1} - Date: ${dateStr}] Symptoms: ${h.symptoms} | Solutions: ${h.solutions}`;
+        });
+        recentTests.forEach((t, i) => {
+          const dateStr = t.date ? new Date(t.date).toLocaleDateString() : 'Unknown Date';
+          recentContext += `\n[RECENT TEST ${i+1} - Date: ${dateStr}] ${t.test_name}: ${t.results}`;
+        });
+
+        if (recentContext) {
+          context = `${patientInfo}\nMOST RECENT RECORDS (to help find patterns and dates):${recentContext}\n\nRELEVANT SEARCH RESULTS (RAG):\n${context}`;
+        } else {
+          context = `${patientInfo}\n${context}`;
+        }
+      }
+    }
+
+    // 3. Format the system prompt with the retrieved context and role
+    const systemPrompt = formatSystemPrompt(patientName, context, role);
+
+    // 4. Construct conversation for Gemma
+    // SDK REQUIREMENT: First content must be role 'user'
+    const conversationHistory = history
+      .filter(m => m.role !== 'system')
+      .map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }],
+      }));
+
+    // Find first user index
+    const firstUserIndex = conversationHistory.findIndex(m => m.role === 'user');
+    const validHistory = firstUserIndex !== -1 ? conversationHistory.slice(firstUserIndex) : [];
+
+    const chat = chatModel.startChat({
+      history: validHistory,
+    });
+
+    // We send the system prompt as part of the instructions if it's the first message, 
+    // or just prepend it for context if we're not using system instructions separately.
+    // In SDK v0.x, we can pass systemInstruction to the model constructor, 
+    // but here we'll prepend it to the query for simplicity or use a specific format.
+    
+    const prompt = `System Instruction: ${systemPrompt}\n\nUser Query: ${query}`;
+    const result = await chat.sendMessage(prompt);
+    const answer = result.response.text();
+
+    return answer;
+  } catch (error) {
+    console.error('Chat AI failed:', error);
+    return "I encountered an error while analyzing the patient's records. Please try again later.";
+  }
+}

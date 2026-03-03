@@ -13,7 +13,10 @@ To maintain a stable and reliable codebase, we adhere to the following branching
 
 ### Workflow Example:
 
-1.  Update your local `development` branch: `git checkout development && git pull`
-2.  Create your feature branch: `git checkout -b feature/your-feature-name`
-3.  Commit your changes and push: `git push origin feature/your-feature-name`
-4.  Open a Pull Request into the `development` branch.
+## Frontend Development
+
+We use [shadcn/ui](https://ui.shadcn.com/) for our UI components. When building new features:
+
+1.  **Prefer Existing Components**: Check `src/components/ui` for existing components before adding new ones.
+2.  **Add New Components**: Use the shadcn CLI to add new components: `bunx shadcn@latest add <component-name>`.
+3.  **Styling**: Use Tailwind CSS for custom styling, following the established design system.

@@ -1,0 +1,11 @@
+{
+  "general": {
+    "enableNotifications": true
+  },
+  "mcpServers": {
+    "supabase": {
+      "url": "https://mcp.supabase.com/mcp",
+      "type": "http"
+    }
+  }
+}
