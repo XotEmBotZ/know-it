@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import { SemanticCaseSearch } from './semantic-case-search'
 
 interface DoctorDashboardProps {
 	profile: any
@@ -142,6 +143,7 @@ export function DoctorDashboard({
 
 					<TabsContent value="patients" id="tab-content-patients">
 						<div className="flex flex-col gap-6">
+							<SemanticCaseSearch />
 							<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 								<DoctorConsents
 									consents={consents}
