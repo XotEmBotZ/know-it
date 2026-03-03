@@ -382,14 +382,14 @@ export function PatientDashboard({
 			{/* Collapsible Sidebar / Mobile Full-screen Overlay */}
 			<aside
 				className={cn(
-					'transition-all duration-300 ease-in-out border-l bg-background flex flex-col shrink-0 z-50',
+					'transition-all duration-300 ease-in-out border-l bg-background flex flex-col shrink-0 z-50 overflow-hidden',
 					'fixed inset-0 md:relative md:inset-auto', // Mobile full-screen, desktop relative
 					isChatOpen
-						? 'w-full md:w-80 lg:w-96 translate-x-0'
-						: 'w-0 translate-x-full md:translate-x-0 overflow-hidden border-l-0',
+						? 'w-full md:w-80 lg:w-96 translate-x-0 h-full'
+						: 'w-0 translate-x-full md:translate-x-0 border-l-0',
 				)}
 			>
-				<div className="flex-1 flex flex-col p-6 min-w-[320px] md:min-w-0">
+				<div className="flex-1 flex flex-col p-6 min-w-[320px] md:min-w-0 h-full min-h-0">
 					<ChatUI
 						title="Health Assistant"
 						badge="Live"

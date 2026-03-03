@@ -102,7 +102,7 @@ export function ChatUI({
 	return (
 		<Card
 			className={cn(
-				'flex flex-col h-full border-none shadow-none bg-transparent p-0',
+				'flex flex-col flex-1 min-h-0 border-none shadow-none bg-transparent p-0',
 				className,
 			)}
 			suppressHydrationWarning

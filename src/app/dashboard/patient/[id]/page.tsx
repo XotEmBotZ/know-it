@@ -432,12 +432,12 @@ export default function PatientHistoryPage({
 
       {/* Collapsible Sidebar / Mobile Full-screen Overlay */}
       <aside className={cn(
-        "transition-all duration-300 ease-in-out border-l bg-background flex flex-col shrink-0 z-50 h-full",
+        "transition-all duration-300 ease-in-out border-l bg-background flex flex-col shrink-0 z-50 h-full overflow-hidden",
         "fixed inset-0 md:relative md:inset-auto",
-        isChatOpen ? "w-full md:w-80 lg:w-96 translate-x-0" : "w-0 translate-x-full md:translate-x-0 overflow-hidden border-l-0"
+        isChatOpen ? "w-full md:w-80 lg:w-96 translate-x-0" : "w-0 translate-x-full md:translate-x-0 border-l-0"
       )}>
-        <div className="flex-1 flex flex-col p-6 min-w-[320px] md:min-w-0 h-full">
-          <div className="flex items-center justify-between mb-2 px-1">
+        <div className="flex-1 flex flex-col p-6 min-w-[320px] md:min-w-0 h-full min-h-0">
+          <div className="flex items-center justify-between mb-2 px-1 shrink-0">
             <div className="flex items-center space-x-2">
               <Switch 
                 id="full-history" 
