@@ -39,7 +39,7 @@ interface PatientConsentsProps {
   onDelete: (doctorId: string) => Promise<any>
   onSearchDoctors: (query: string) => Promise<any[]>
   onGrantAccess: (doctorId: string) => Promise<any>
-  onBookAppointment?: (doctorId: string, date: string) => Promise<any>
+  onBookAppointment?: (doctorId: string, date: string, type?: string) => Promise<any>
 }
 
 export function PatientConsents({ 
