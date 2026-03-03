@@ -11,9 +11,10 @@ interface DoctorQueueProps {
 	queue: any[]
 	onMarkDone: (id: string) => Promise<any>
 	onSkip: (id: string) => Promise<any>
+	onViewHistory?: (patientId: string) => void
 }
 
-export function DoctorQueue({ queue, onMarkDone, onSkip }: DoctorQueueProps) {
+export function DoctorQueue({ queue, onMarkDone, onSkip, onViewHistory }: DoctorQueueProps) {
 	const [loading, setLoading] = useState<string | null>(null)
 
 	const safeQueue = queue || []
@@ -72,6 +73,15 @@ export function DoctorQueue({ queue, onMarkDone, onSkip }: DoctorQueueProps) {
 								</div>
 							</div>
 							<div className="flex flex-wrap gap-3">
+								{onViewHistory && (
+									<Button
+										onClick={() => onViewHistory(currentPatient.patient_id)}
+										variant="secondary"
+										className="gap-2 h-12 px-6"
+									>
+										View History
+									</Button>
+								)}
 								<Button
 									onClick={() => handleAction(currentPatient.id, 'skip')}
 									variant="outline"
@@ -133,15 +143,27 @@ export function DoctorQueue({ queue, onMarkDone, onSkip }: DoctorQueueProps) {
 											</div>
 										</div>
 									</div>
-									<Button
-										size="sm"
-										variant="ghost"
-										onClick={() => handleAction(item.id, 'skip')}
-										disabled={loading === item.id}
-										className="text-muted-foreground hover:text-foreground"
-									>
-										Skip
-									</Button>
+									<div className="flex gap-2">
+										{onViewHistory && (
+											<Button
+												size="sm"
+												variant="ghost"
+												onClick={() => onViewHistory(item.patient_id)}
+												className="text-muted-foreground hover:text-foreground"
+											>
+												History
+											</Button>
+										)}
+										<Button
+											size="sm"
+											variant="ghost"
+											onClick={() => handleAction(item.id, 'skip')}
+											disabled={loading === item.id}
+											className="text-muted-foreground hover:text-foreground"
+										>
+											Skip
+										</Button>
+									</div>
 								</div>
 							))}
 						</div>

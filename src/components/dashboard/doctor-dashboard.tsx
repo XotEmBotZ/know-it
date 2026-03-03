@@ -98,6 +98,7 @@ export function DoctorDashboard({
 							queue={queue} 
 							onMarkDone={markDone} 
 							onSkip={skipPatient} 
+							onViewHistory={viewHistory}
 						/>
 					</TabsContent>
 
