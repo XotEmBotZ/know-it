@@ -9,8 +9,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Use gemini-embedding-001 as per latest documentation
 export const embeddingModel = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
 
-// Use Gemma 3 27B (Instruction Tuned) for clinical analysis
-export const chatModel = genAI.getGenerativeModel({ model: "gemma-3-27b-it" });
+// Use Gemini 1.5 Flash for reliable clinical analysis
+export const chatModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 /**
  * Normalizes a vector to unit length (L2 normalization).

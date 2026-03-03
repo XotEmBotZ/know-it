@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { ChatUI } from './chat-ui'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, Video, Calendar, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SemanticCaseSearch } from './semantic-case-search'
 
@@ -46,10 +46,24 @@ export function DoctorDashboard({
 	const router = useRouter()
 	const supabase = createClient()
 	const [isChatOpen, setIsChatOpen] = useState(false)
+	const [mounted, setMounted] = useState(false)
 
 	useEffect(() => {
-		// Listen for ANY changes to the appointment_queue for this doctor
-		// This refreshes the whole dashboard, including the 'Upcoming' tab
+		setMounted(true)
+	}, [])
+
+	const formatDate = (dateStr: string) => {
+		if (!mounted) return ''
+		try {
+			return new Date(dateStr).toLocaleDateString()
+		} catch (e) {
+			return dateStr
+		}
+	}
+
+  const videoRequests = (upcoming || []).filter(a => a.appointment_type === 'video')
+
+	useEffect(() => {
 		const channel = supabase
 			.channel('doctor_global_queue_changes')
 			.on('postgres_changes', { 
@@ -88,9 +102,17 @@ export function DoctorDashboard({
 				</div>
 
 				<Tabs defaultValue="queue" className="w-full" id="doctor-dashboard-tabs">
-					<TabsList className="grid w-full grid-cols-4 mb-8">
+					<TabsList className="grid w-full grid-cols-5 mb-8">
 						<TabsTrigger value="queue" id="tab-trigger-queue">Active Queue</TabsTrigger>
 						<TabsTrigger value="upcoming" id="tab-trigger-upcoming">Upcoming</TabsTrigger>
+            <TabsTrigger value="video-requests" id="tab-trigger-video-requests" className="relative">
+              Video Requests
+              {videoRequests.length > 0 && (
+                <Badge variant="destructive" className="ml-2 px-1.5 h-4 min-w-[16px] flex items-center justify-center text-[10px] animate-pulse">
+                  {videoRequests.length}
+                </Badge>
+              )}
+            </TabsTrigger>
 						<TabsTrigger value="patients" id="tab-trigger-patients">My Patients</TabsTrigger>
 						<TabsTrigger value="profile" id="tab-trigger-profile">Profile</TabsTrigger>
 					</TabsList>
@@ -115,11 +137,22 @@ export function DoctorDashboard({
 											<div key={app.id} className="flex items-center justify-between p-4 border rounded-lg">
 												<div>
 													<p className="font-semibold">{app.patient?.full_name}</p>
-													<p className="text-sm text-muted-foreground">
-														{new Date(app.appointment_date).toLocaleDateString()} - Queue #{app.queue_number}
-													</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(app.appointment_date)} - Queue #{app.queue_number}
+                            </p>
+                            {app.appointment_type === 'video' && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 text-[10px]">Video</Badge>
+                            )}
+                            {app.appointment_type === 'emergency' && (
+                              <Badge variant="destructive" className="text-[10px] bg-red-600">Emergency</Badge>
+                            )}
+                          </div>
 												</div>
-												<Badge variant="outline">Scheduled</Badge>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => viewHistory(app.patient_id)}>History</Button>
+												  <Badge variant="outline">Scheduled</Badge>
+                        </div>
 											</div>
 										))}
 									</div>
@@ -129,6 +162,42 @@ export function DoctorDashboard({
 							</CardContent>
 						</Card>
 					</TabsContent>
+
+          <TabsContent value="video-requests" id="tab-content-video-requests">
+            <Card>
+              <CardHeader>
+                <CardTitle>Video Consultation Requests</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {videoRequests.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No pending video consultation requests.</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {videoRequests.map((app) => (
+                      <div key={app.id} className="p-6 border rounded-xl bg-blue-50/30 border-blue-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                            <Video className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-lg font-bold">{app.patient?.full_name}</p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Calendar className="w-4 h-4" />
+                              Requested: {formatDate(app.appointment_date)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" onClick={() => viewHistory(app.patient_id)}>View Case</Button>
+                          <Button className="bg-blue-600 hover:bg-blue-700">Approve & Schedule</Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
 					<TabsContent value="patients" id="tab-content-patients">
 						<div className="flex flex-col gap-6">

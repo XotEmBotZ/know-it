@@ -19,6 +19,7 @@ import {
 import { Calendar } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 interface Consent {
   id: string
@@ -50,6 +51,7 @@ export function PatientConsents({
   onGrantAccess,
   onBookAppointment,
 }: PatientConsentsProps) {
+  const [mounted, setMounted] = useState(false)
   const [consents, setConsents] = useState<Consent[]>(initialConsents)
   const [loading, setLoading] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -61,10 +63,31 @@ export function PatientConsents({
   // Booking state
   const [bookingDoctor, setBookingDoctor] = useState<Consent | null>(null)
   const [bookingDate, setBookingDate] = useState('')
+  const [appointmentType, setAppointmentType] = useState<'in-person' | 'video' | 'emergency'>('in-person')
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     setConsents(initialConsents)
   }, [initialConsents])
+
+  if (!mounted) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Medical Access</CardTitle>
+          <Button size="sm">Grant New Access</Button>
+        </CardHeader>
+        <CardContent>
+          <div className="h-20 flex items-center justify-center">
+            <p className="text-sm text-muted-foreground italic">Loading access details...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const handleAction = async (doctorId: string, action: 'approve' | 'revoke' | 'grant' | 'delete' | 'book') => {
     setLoading(doctorId)
@@ -81,7 +104,20 @@ export function PatientConsents({
         }
       } else if (action === 'book') {
         if (onBookAppointment && bookingDate) {
-          res = (await onBookAppointment(doctorId, bookingDate)) || res
+          // Enforcement: Video call must be 1 day in advance (Emergency bypasses this)
+          if (appointmentType === 'video') {
+            const tomorrow = new Date()
+            tomorrow.setDate(tomorrow.getDate() + 1)
+            tomorrow.setHours(0, 0, 0, 0)
+            const chosenDate = new Date(bookingDate)
+            if (chosenDate < tomorrow) {
+              toast.error('Video consultations must be booked at least 1 day in advance.')
+              setLoading(null)
+              return
+            }
+          }
+
+          res = (await onBookAppointment(doctorId, bookingDate, appointmentType)) || res
           if (res.success) {
             closeBooking()
           }
@@ -320,6 +356,49 @@ export function PatientConsents({
                       setBookingDate(e.target.value)
                     }}
                   />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">Consultation Type</label>
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      variant={appointmentType === 'in-person' ? 'default' : 'outline'}
+                      size="sm"
+                      className="flex-1 min-w-[100px]"
+                      onClick={() => setAppointmentType('in-person')}
+                    >
+                      In-Person
+                    </Button>
+                    <Button 
+                      variant={appointmentType === 'video' ? 'default' : 'outline'}
+                      size="sm"
+                      className="flex-1 min-w-[100px]"
+                      onClick={() => setAppointmentType('video')}
+                    >
+                      Video Call
+                    </Button>
+                    <Button 
+                      variant={appointmentType === 'emergency' ? 'destructive' : 'outline'}
+                      size="sm"
+                      className={cn(
+                        "flex-1 min-w-[100px]",
+                        appointmentType === 'emergency' ? "bg-red-600 hover:bg-red-700" : "text-red-600 border-red-200 hover:bg-red-50"
+                      )}
+                      onClick={() => setAppointmentType('emergency')}
+                    >
+                      Emergency
+                    </Button>
+                  </div>
+                  {appointmentType === 'video' && (
+                    <p className="text-[10px] text-muted-foreground">
+                      * Video consultations must be booked at least 1 day in advance.
+                    </p>
+                  )}
+                  {appointmentType === 'emergency' && (
+                    <p className="text-[10px] text-red-600 font-medium">
+                      * Emergency bookings prioritize your placement in the queue.
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2 mt-4">

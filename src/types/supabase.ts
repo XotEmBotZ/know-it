@@ -237,6 +237,7 @@ export type Database = {
           appointment_date: string
           queue_number: number
           status: string | null
+          appointment_type: string | null
         }
         Insert: {
           id?: string
@@ -246,6 +247,7 @@ export type Database = {
           appointment_date: string
           queue_number: number
           status?: string | null
+          appointment_type?: string | null
         }
         Update: {
           id?: string
@@ -255,6 +257,7 @@ export type Database = {
           appointment_date?: string
           queue_number?: number
           status?: string | null
+          appointment_type?: string | null
         }
         Relationships: [
           {

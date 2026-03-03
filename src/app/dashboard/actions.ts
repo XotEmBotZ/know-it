@@ -105,10 +105,10 @@ export async function skipPatient(id: string) {
   }
 }
 
-export async function bookAppointment(doctorId: string, date: string) {
+export async function bookAppointment(doctorId: string, date: string, type: string = 'in-person') {
   try {
     const { dal, userId } = await getAuthenticatedDAL()
-    await dal.bookAppointment(doctorId, userId, date)
+    await dal.bookAppointment(doctorId, userId, date, type)
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error: any) {

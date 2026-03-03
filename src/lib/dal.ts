@@ -271,17 +271,45 @@ export class DataAccessLayer {
     return record;
   }
 
-  // --- Queue & Scheduling ---
-  async bookAppointment(doctorId: string, patientId: string, date: string) {
+  async bookAppointment(doctorId: string, patientId: string, date: string, type: string = 'in-person') {
     const { data: queueNumberData, error: qError } = await (this.supabase as any).rpc('get_next_queue_number', { p_doctor_id: doctorId, p_date: date });
     if (qError) throw qError;
     const queueNumber = Number(queueNumberData);
-    const { data, error } = await this.supabase
-      .from('appointment_queue')
-      .insert({ doctor_id: doctorId, patient_id: patientId, appointment_date: date, queue_number: queueNumber, status: 'pending' })
-      .select().single();
-    if (error) throw error;
-    return data;
+    
+    const insertData: any = { 
+      doctor_id: doctorId, 
+      patient_id: patientId, 
+      appointment_date: date, 
+      queue_number: queueNumber, 
+      status: 'pending'
+    };
+
+    // Attempt to include appointment_type if the column exists
+    try {
+      const { data, error } = await this.supabase
+        .from('appointment_queue')
+        .insert({ ...insertData, appointment_type: type })
+        .select().single();
+      
+      if (error && error.code === '42703') { // Undefined column
+        const { data: fallbackData, error: fallbackError } = await this.supabase
+          .from('appointment_queue')
+          .insert(insertData)
+          .select().single();
+        if (fallbackError) throw fallbackError;
+        return { ...fallbackData, appointment_type: 'in-person' };
+      }
+      if (error) throw error;
+      return data;
+    } catch (e: any) {
+      // Fallback for missing column
+      const { data, error } = await this.supabase
+        .from('appointment_queue')
+        .insert(insertData)
+        .select().single();
+      if (error) throw error;
+      return { ...data, appointment_type: 'in-person' };
+    }
   }
 
   async getDoctorAllPendingAppointments(doctorId: string) {

@@ -124,11 +124,15 @@ export function PatientDashboard({
 		}
 	}
 
-  const handleBookAppointment = async (doctorId: string, date: string) => {
-    const res = await bookAppointment(doctorId, date)
+  const handleBookAppointment = async (doctorId: string, date: string, type: string = 'in-person') => {
+    const res = await bookAppointment(doctorId, date, type)
     if (res.success) {
       toast.success('Appointment booked successfully')
-      if (refreshData) await refreshData()
+      if (refreshData) {
+        await refreshData()
+      } else {
+        window.location.reload()
+      }
     } else {
       toast.error(res.error || 'Failed to book appointment')
     }
@@ -153,8 +157,20 @@ export function PatientDashboard({
 			return dateStr
 		}
 	}
+	if (!mounted) {
+		return (
+			<div className="flex-1 w-full flex flex-col items-center justify-center p-8 animate-pulse">
+				<div className="w-full max-w-5xl h-32 bg-muted rounded-xl mb-8" />
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl">
+					<div className="h-64 bg-muted rounded-xl" />
+					<div className="h-64 bg-muted rounded-xl" />
+				</div>
+			</div>
+		)
+	}
+
 	return (
-		<div className="flex-1 w-full flex flex-row h-screen overflow-hidden relative" suppressHydrationWarning>
+		<div className="flex-1 w-full flex flex-row h-screen overflow-hidden relative">
 			{/* Main Content Area */}
 			<div className="flex-1 flex flex-col gap-8 p-4 md:p-8 overflow-y-auto">
 				<div className="flex justify-between items-center">
@@ -254,7 +270,7 @@ export function PatientDashboard({
                             />
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {new Date(record.date).toLocaleDateString()}
+                            {formatDate(record.date)}
                           </p>
                         </div>
                         <SharePrescriptionDialog medicalRecordId={record.id} />
